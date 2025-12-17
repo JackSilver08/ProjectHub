@@ -1,0 +1,69 @@
+﻿@page
+@model PROJECTHUB_ENTERPRISE.Pages.Account.RegisterModel
+@{
+    ViewData["Title"] = "Register";
+    Layout = "_Layout";
+}
+
+<div class="container vh-100 d-flex align-items-center justify-content-center">
+    <div class="card shadow-sm border-0" style="width: 460px;">
+        <div class="card-body p-4">
+
+            <h3 class="text-center fw-bold mb-4">Create your account</h3>
+
+            @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+            {
+                <div class="alert alert-danger py-2">
+                    @Model.ErrorMessage
+                </div>
+            }
+
+            <form method="post" novalidate>
+
+                <!-- Full name -->
+                <div class="mb-3">
+                    <label asp-for="Input.FullName" class="form-label"></label>
+                    <input asp-for="Input.FullName" class="form-control" />
+                    <span asp-validation-for="Input.FullName" class="text-danger small"></span>
+                </div>
+
+                <!-- Email -->
+                <div class="mb-3">
+                    <label asp-for="Input.Email" class="form-label"></label>
+                    <input asp-for="Input.Email" class="form-control" />
+                    <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                </div>
+
+                <!-- Password -->
+                <div class="mb-3">
+                    <label asp-for="Input.Password" class="form-label"></label>
+                    <input asp-for="Input.Password" class="form-control" />
+                    <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                </div>
+
+                <!-- Confirm -->
+                <div class="mb-3">
+                    <label asp-for="Input.ConfirmPassword" class="form-label"></label>
+                    <input asp-for="Input.ConfirmPassword" class="form-control" />
+                    <span asp-validation-for="Input.ConfirmPassword" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 fw-semibold">
+                    Register
+                </button>
+            </form>
+
+            <div class="text-center mt-3">
+                <span class="text-muted">Already have an account?</span>
+                <a asp-page="/Account/Login" class="fw-semibold text-decoration-none">
+                    Login
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,90 @@
+﻿/* =========================================================
+   GLOBAL
+========================================================= */
+body {
+    background-color: #f5f6f8;
+    margin: 0;
+}
+
+/* =========================================================
+   NAVBAR (FIX DROPDOWN)
+========================================================= */
+.navbar {
+    position: relative;
+    z-index: 1030;
+    overflow: visible !important;
+}
+
+/* =========================================================
+   LAYOUT CONTAINER
+========================================================= */
+.container-fluid {
+    overflow: visible !important;
+}
+
+    .container-fluid > .row {
+        overflow: visible !important;
+        position: relative; /* Thêm dòng này */
+    }
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+.sidebar {
+    background-color: #f8f9fa;
+    height: calc(100vh - 56px);
+    position: sticky;
+    top: 56px;
+    z-index: 1020;
+}
+
+    .sidebar .nav-link {
+        color: #333;
+        padding: 10px 16px;
+        border-radius: 6px;
+        margin-bottom: 4px;
+    }
+
+        .sidebar .nav-link:hover {
+            background-color: #e9ecef;
+            color: #000;
+        }
+
+        .sidebar .nav-link.active {
+            background-color: #0d6efd;
+            color: #fff;
+        }
+
+/* =========================================================
+   MAIN CONTENT - ĐÃ SỬA
+========================================================= */
+main {
+    background-color: #fff;
+    min-height: calc(100vh - 56px);
+    border-radius: 8px;
+    /* KHÔNG CÓ position/z-index */
+}
+
+    main.col-10 {
+        position: static !important; /* Quan trọng */
+    }
+
+/* =========================================================
+   DROPDOWN (QUAN TRỌNG)
+========================================================= */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    position: absolute !important;
+    z-index: 2000 !important;
+}
+
+/* =========================================================
+   OPTIONAL: SHADOW & SMOOTH
+========================================================= */
+.dropdown-menu {
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+}
