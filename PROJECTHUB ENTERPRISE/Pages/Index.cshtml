@@ -17,31 +17,37 @@
 
     <!-- Stats Cards -->
     <div class="row g-4 mb-4">
+
+        <!-- Total Projects -->
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Total Projects</h6>
-                    <h3 class="fw-bold">0</h3>
+                    <h3 class="fw-bold">@Model.Stats.TotalProjects</h3>
                 </div>
             </div>
         </div>
 
+        <!-- Open Tasks -->
         <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Open Tasks</h6>
-                    <h3 class="fw-bold">0</h3>
+                    <h3 class="fw-bold">@Model.Stats.OpenTasks</h3>
                 </div>
             </div>
         </div>
 
+        <!-- Completed Tasks -->
+        <div class="col-md-4">
             <div class="card shadow-sm">
                 <div class="card-body">
                     <h6 class="text-muted">Completed Tasks</h6>
-                    <h3 class="fw-bold">0</h3>
+                    <h3 class="fw-bold">@Model.Stats.CompletedTasks</h3>
                 </div>
             </div>
         </div>
+
     </div>
 
     <!-- Project List -->
@@ -60,16 +66,190 @@
                         <th class="text-end">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <!-- Placeholder -->
+            <tbody>
+                @if (Model.Projects.Count == 0)
+                {
                     <tr>
                         <td colspan="4" class="text-center text-muted py-4">
                             No projects found.
                         </td>
                     </tr>
-                </tbody>
+                }
+                else
+                {
+                    foreach (var p in Model.Projects)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@p.Name</td>
+                            <td>@p.Role</td>
+                            <td>
+                                <span class="badge bg-@(p.Status == "Active" ? "success" : "secondary")">
+                                    @p.Status
+                                </span>
+                            </td>
+                                <td class="text-end">
+                                    <a asp-page="/Projects/Details"
+                                       asp-route-id="@p.ProjectId"
+                                       class="btn btn-sm btn-outline-primary">
+                                        View
+                                    </a>
+
+                                    @if (p.Role == "Manager")
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary ms-1"
+                                                onclick="openEditProject(
+                                '@p.ProjectId',
+                                '@p.Name',
+                                '@p.Status'
+                            )">
+                                            Edit
+                                        </button>
+
+                                        @if (p.Status == "Active")
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger ms-1"
+                                                    onclick="toggleProject('@p.ProjectId', true)">
+                                                Delete
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-success ms-1"
+                                                    onclick="toggleProject('@p.ProjectId', false)">
+                                                Restore
+                                            </button>
+                                        }
+                                    }
+                                </td>
+                        </tr>
+                    }
+                }
+            </tbody>
             </table>
         </div>
     </div>
 
 </div>
+
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="editProjectId" />
+
+                <div class="mb-3">
+                    <label class="form-label">Project Name</label>
+                    <input class="form-control" id="editProjectName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="editProjectDescription"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="editProjectStatus">
+                        <option value="false">Active</option>
+                        <option value="true">Archived</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+                <button class="btn btn-primary"
+                        onclick="saveProject()">
+                    Save
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function deleteProject(projectId) {
+            if (!confirm("Are you sure you want to delete this project?")) return;
+
+            const res = await fetch(`?handler=Delete`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken":
+                        document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ projectId })
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message || "Delete failed");
+                return;
+            }
+
+            location.reload();
+        }
+
+             function openEditProject(id, name, status) {
+            document.getElementById("editProjectId").value = id;
+            document.getElementById("editProjectName").value = name;
+            document.getElementById("editProjectStatus").value =
+                status === "Archived" ? "true" : "false";
+
+            new bootstrap.Modal(
+                document.getElementById("editProjectModal")
+            ).show();
+        }
+
+        async function saveProject() {
+            const data = {
+                projectId: document.getElementById("editProjectId").value,
+                name: document.getElementById("editProjectName").value,
+                description: document.getElementById("editProjectDescription").value,
+                isArchived: document.getElementById("editProjectStatus").value === "true"
+            };
+
+            const res = await fetch("?handler=Edit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken":
+                        document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (result.success) location.reload();
+            else alert("Update failed");
+        }
+
+        async function toggleProject(projectId, archive) {
+            if (!confirm("Are you sure?")) return;
+
+            const res = await fetch("?handler=Toggle", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken":
+                        document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ projectId, archive })
+            });
+
+            const result = await res.json();
+            if (result.success) location.reload();
+        }
+    </script>
+}

@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using PROJECTHUB_ENTERPRISE.Data;
+using PROJECTHUB_ENTERPRISE.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,18 +8,17 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Add services
 // =========================
 
-// Razor Pages
 builder.Services.AddRazorPages();
 
-// PostgreSQL DbContext
+// ✅ API Controllers
+builder.Services.AddControllers();
+
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
 
-// =========================
-// Authentication (Cookie)
-// =========================
 builder.Services.AddAuthentication("ProjectHubCookie")
     .AddCookie("ProjectHubCookie", options =>
     {
@@ -26,7 +26,6 @@ builder.Services.AddAuthentication("ProjectHubCookie")
         options.LogoutPath = "/Account/Logout";
         options.AccessDeniedPath = "/Account/AccessDenied";
 
-        // 🔐 Cookie settings (FIX warning & security)
         options.Cookie.Name = "ProjectHub.Auth";
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
@@ -37,6 +36,7 @@ builder.Services.AddAuthentication("ProjectHubCookie")
     });
 
 builder.Services.AddAuthorization();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -49,23 +49,20 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
     app.UseHsts();
 }
+app.MapHub<ProjectHub>("/hubs/project");
 
-// ⚠️ Luôn redirect HTTPS
 app.UseHttpsRedirection();
-
-// Static files (CSS, JS)
 app.UseStaticFiles();
 
 app.UseRouting();
 
-// ⚠️ BẮT BUỘC: Auth trước Authorization
 app.UseAuthentication();
 app.UseAuthorization();
 
 // Razor Pages
 app.MapRazorPages();
 
-// =========================
-// 3. Run app
-// =========================
+// ✅ API
+app.MapControllers();
+
 app.Run();

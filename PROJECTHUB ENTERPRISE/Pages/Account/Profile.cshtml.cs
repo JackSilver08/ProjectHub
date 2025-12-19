@@ -42,5 +42,45 @@ namespace PROJECTHUB_ENTERPRISE.Pages.Account
             return Page();
         }
 
+        // ================= EDIT PROFILE =================
+        [BindProperty]
+        public EditProfileDto EditProfile { get; set; } = new();
+        public async Task<IActionResult> OnPostEditProfileAsync()
+        {
+            var dto = EditProfile;
+
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return new JsonResult(new { success = false });
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive);
+
+            if (user == null)
+                return new JsonResult(new { success = false });
+
+            user.FullName = dto.FullName ?? user.FullName;
+            user.Username = dto.Username ?? user.Username;
+            user.Email = dto.Email ?? user.Email;
+
+            if (!string.IsNullOrWhiteSpace(dto.AvatarUrl))
+                user.AvatarUrl = dto.AvatarUrl;
+
+
+            if (!string.IsNullOrWhiteSpace(dto.AvatarUrl))
+                user.AvatarUrl = dto.AvatarUrl;
+
+            await _context.SaveChangesAsync();
+
+            return new JsonResult(new
+            {
+                success = true,
+                avatarUrl = user.AvatarUrl,
+                fullName = user.FullName,
+                username = user.Username,
+                email = user.Email
+            });
+        }
+
     }
 }

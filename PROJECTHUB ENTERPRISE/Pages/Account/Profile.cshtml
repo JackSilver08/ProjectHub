@@ -90,15 +90,179 @@
                         </div>
                     </div>
 
+               
                     <!-- ===== ACTION ===== -->
-                    <div class="d-flex justify-content-end mt-4">
+                    <div class="profile-action-container">
                         <a class="profile-action-button btn btn-primary px-4"
-                           asp-page="/Account/EditProfile">
-                            <i class="bi bi-pencil profile-icon me-1"></i> Edit Profile
+                           data-bs-toggle="modal"
+                           data-bs-target="#editProfileModal">
+                            <i class="bi bi-pencil me-2"></i> Edit Profile
+                        </a>
+                        <a asp-page="/Account/ChangePassword"
+                           class="btn btn-outline-secondary px-4">
+                            <i class="bi bi-shield-lock me-2"></i> Change Password
                         </a>
                     </div>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- ===== EDIT PROFILE MODAL ===== -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="editProfileForm" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="text-center mb-3">
+                    <img id="avatarPreview"
+                         src="@(string.IsNullOrEmpty(Model.CurrentUser?.AvatarUrl)
+                                                              ? "/images/avatar-default.png"
+                                     : Model.CurrentUser.AvatarUrl)"
+                         class="rounded-circle mb-2"
+                         width="90" height="90" />
+
+                    <input type="file"
+                           id="avatarFile"
+                           class="form-control"
+                           accept="image/*" />
+
+                    <input type="hidden"
+                           id="AvatarUrl"
+                           name="EditProfile.AvatarUrl" />
+
+                </div>
+
+
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input class="form-control"
+                           name="EditProfile.FullName"
+                           value="@Model.CurrentUser?.FullName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Display Name (Username)</label>
+                    <input class="form-control"
+                           name="EditProfile.Username"
+                           value="@Model.CurrentUser?.Username" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input class="form-control"
+                           type="email"
+                           name="EditProfile.Email"
+                           value="@Model.CurrentUser?.Email" />
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            data-bs-dismiss="modal">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const avatarInput = document.getElementById("avatarFile");
+        const avatarPreview = document.getElementById("avatarPreview");
+        const avatarUrlInput = document.getElementById("AvatarUrl");
+        const profileAvatar = document.querySelector(".profile-avatar");
+
+        avatarInput.addEventListener("change", async () => {
+            const file = avatarInput.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith("image/")) {
+                alert("Please select an image file");
+                return;
+            }
+            if (file.size > 2 * 1024 * 1024) {
+                alert("Image must be under 2MB");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("upload_preset", "avatar_unsigned");
+
+            avatarPreview.style.opacity = "0.5";
+
+            const res = await fetch(
+                "https://api.cloudinary.com/v1_1/dkimznyid/image/upload",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            const data = await res.json();
+
+            if (!data.secure_url) {
+                alert("Upload failed");
+                avatarPreview.style.opacity = "1";
+                return;
+            }
+
+            // 🔥 Force reload image
+            const url = data.secure_url;
+            const bust = "?t=" + Date.now();
+
+            avatarPreview.src = url + bust;
+            avatarUrlInput.value = url;
+            avatarPreview.style.opacity = "1";
+        });
+
+        document.getElementById("editProfileForm")
+            .addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const formData = new FormData(e.target);
+
+                const res = await fetch("?handler=EditProfile", {
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        "RequestVerificationToken":
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    }
+                });
+
+                const data = await res.json();
+                if (!data.success) return;
+
+                const bust = "?t=" + Date.now();
+
+                // 🔥 Update UI ngay
+                if (data.avatarUrl) {
+                    profileAvatar.src = data.avatarUrl + bust;
+                }
+
+                document.querySelector(".profile-info h3").innerText =
+                    data.fullName || data.username;
+
+                document.querySelector(".profile-email").innerText =
+                    data.email;
+
+                bootstrap.Modal.getInstance(
+                    document.getElementById("editProfileModal")
+                ).hide();
+            });
+    </script>
+
+
+}
+

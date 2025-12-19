@@ -52,16 +52,22 @@ namespace PROJECTHUB_ENTERPRISE.Pages.Account
 {
     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
 
-    // 👉 DÙNG username để định danh
+    // Username dùng để hiển thị ở header
     new Claim(ClaimTypes.Name, user.Username),
 
-    // 👉 FullName chỉ để hiển thị
+    // Full name (optional)
     new Claim("FullName",
         string.IsNullOrWhiteSpace(user.FullName)
             ? ""
             : user.FullName),
 
-    new Claim(ClaimTypes.Email, user.Email)
+    new Claim(ClaimTypes.Email, user.Email),
+
+    // ⭐ QUAN TRỌNG: AVATAR
+    new Claim("AvatarUrl",
+        string.IsNullOrEmpty(user.AvatarUrl)
+            ? "/images/default-avatar.png"
+            : user.AvatarUrl)
 };
 
 

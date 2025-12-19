@@ -1,6 +1,681 @@
-﻿namespace PROJECTHUB_ENTERPRISE.Pages.Projects
+﻿@page
+@model PROJECTHUB_ENTERPRISE.Pages.Projects.DetailsModel
+@{
+}
+
+
+<input type="hidden" id="projectId" value="@Model.Project.ProjectId" />
+
+<h2 class="fw-bold">@Model.Project.Name</h2>
+<p class="text-muted">@Model.Project.Description</p>
+
+@if (Model.Project.IsArchived)
 {
-    public class Details
+    <span class="badge bg-secondary">Archived</span>
+}
+else
+{
+    <span class="badge bg-success">Active</span>
+}
+
+
+<div class="nav nav-tabs mt-4" id="projectTabs">
+    <a class="nav-link active" data-tab="summary">Summary</a>
+
+    <a class="nav-link" data-tab="members">Members</a>
+
+    <a class="nav-link" data-tab="board">Board</a>
+
+    <a class="nav-link" data-tab="wiki">Wiki</a>
+
+    @if (Model.Project.CurrentUserRole == "Manager")
     {
+        <a class="nav-link" data-tab="settings">Settings</a>
     }
+</div>
+<div id="tab-summary" class="tab-content mt-4">
+
+    <!-- STAT CARDS -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>Total Tasks</h6>
+                    <h3>@Model.Project.TotalTasks</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>Open</h6>
+                    <h3>@Model.Project.OpenTasks</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h6>Completed</h6>
+                    <h3>@Model.Project.CompletedTasks</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="fw-semibold mb-3">Task status</h6>
+                    <canvas id="taskStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="fw-semibold mb-3">Tasks over time</h6>
+                    <canvas id="taskLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<div id="tab-members" class="tab-content mt-4 d-none">
+<div class="card mt-5">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 fw-semibold">Members</h5>
+
+        @if (Model.Project.CurrentUserRole == "Manager")
+        {
+            <button class="btn btn-sm btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addMemberModal">
+                + Add member
+            </button>
+        }
+    </div>
+
+    <ul class="list-group list-group-flush">
+        @foreach (var m in Model.Project.Members)
+        {
+            <li class="list-group-item d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+
+                    <!-- Avatar placeholder -->
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                         style="width:40px;height:40px;font-weight:600;">
+                        @m.FullName.Substring(0, 1)
+                    </div>
+
+                    <div>
+                        <div class="fw-semibold">@m.FullName</div>
+                        <small class="text-muted">@m.Email</small>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge @(m.Role == "Manager" ? "bg-primary" : "bg-secondary")">
+                        @m.Role
+                    </span>
+
+                    @if (Model.Project.CurrentUserRole == "Manager" && m.Role != "Manager")
+                    {
+                        <form method="post"
+                              asp-page-handler="RemoveMember"
+                              asp-route-projectId="@Model.Project.ProjectId"
+                              asp-route-userId="@m.UserId"
+                              onsubmit="return confirm('Remove this member?')">
+                            <button class="btn btn-sm btn-outline-danger"
+                                    type="button"
+                                    onclick="openRemoveModal('@Model.Project.ProjectId',
+                                         '@m.UserId',
+                                         '@m.FullName')">
+                                Remove
+                            </button>
+
+
+                        </form>
+                    }
+                </div>
+            </li>
+        }
+    </ul>
+</div>
+
+
+<div class="modal fade" id="addMemberModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Add member</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <label class="form-label fw-semibold">Email</label>
+                <input type="email"
+                       id="memberEmail"
+                       class="form-control"
+                       placeholder="Enter email address"
+                       autocomplete="off" />
+
+                <!-- SEARCH RESULT -->
+                <ul class="list-group mt-2 d-none"
+                    id="userSearchResult">
+                </ul>
+
+                <!-- SELECTED USER -->
+                <div id="selectedUser"
+                     class="alert alert-light mt-3 d-none">
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-light"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <button class="btn btn-primary"
+                        id="addMemberBtn"
+                        disabled>
+                    Add
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="confirmRemoveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-danger">
+                    Remove member
+                </h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                Are you sure you want to remove
+                <strong id="removeMemberName"></strong>
+                from this project?
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-light"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <form method="post"
+                      id="removeMemberForm">
+                    <button class="btn btn-danger">
+                        Yes, remove
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+</div>
+<div id="tab-board" class="tab-content mt-4 d-none">
+    <!-- BOARD HEADER -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold mb-0">Task board</h5>
+
+        <button class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addTaskModal">
+            + Add task
+        </button>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- TODO -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header fw-semibold">Todo</div>
+                <div class="card-body d-flex flex-column gap-2">
+                    @foreach (var t in Model.Board.Todo)
+                    {
+                        <div class="card shadow-sm position-relative">
+                            <div class="card-body p-2">
+
+                                <!-- ⋯ MENU BUTTON -->
+                                <div class="dropdown position-absolute top-0 end-0 m-1">
+                                    <button class="btn btn-sm btn-light"
+                                            data-bs-toggle="dropdown">
+                                        ⋯
+                                    </button>
+
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <button class="dropdown-item"
+                                                    onclick="openEditTask(
+                '@t.Id',
+                '@t.Title',
+                '@t.AssigneeId',
+                '@(t.Deadline?.ToString("yyyy-MM-dd"))',
+                '@((int)t.Status)'
+            )">
+                                                ✏️ Edit
+                                            </button>
+
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item text-danger"
+                                                    onclick="deleteTask('@t.Id')">
+                                                🗑 Delete
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <div class="fw-semibold">@t.Title</div>
+                                <small class="text-muted">
+                                    @t.AssigneeName ?? "Unassigned"
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- IN PROGRESS -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header fw-semibold">In Progress</div>
+                <div class="card-body d-flex flex-column gap-2">
+                    @foreach (var t in Model.Board.InProgress)
+                    {
+                        <div class="card shadow-sm">
+                            <div class="card-body p-2">
+                                <div class="fw-semibold">@t.Title</div>
+                                <small class="text-muted">
+                                    @t.AssigneeName ?? "Unassigned"
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- REVIEW -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header fw-semibold">Review</div>
+                <div class="card-body d-flex flex-column gap-2">
+                    @foreach (var t in Model.Board.Review)
+                    {
+                        <div class="card shadow-sm">
+                            <div class="card-body p-2">
+                                <div class="fw-semibold">@t.Title</div>
+                                <small class="text-muted">
+                                    @t.AssigneeName ?? "Unassigned"
+                                </small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- DONE -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header fw-semibold">Done</div>
+                <div class="card-body d-flex flex-column gap-2">
+                    @foreach (var t in Model.Board.Done)
+                    {
+                        <div class="card shadow-sm bg-light">
+                            <div class="card-body p-2">
+                                <div class="fw-semibold text-decoration-line-through">
+                                    @t.Title
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<div id="tab-wiki" class="tab-content d-none"></div>
+<div id="tab-settings" class="tab-content d-none"></div>
+
+<!-- Pop up add task -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Create task</h5>
+                <button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden"
+                       id="taskProjectId"
+                       value="@Model.Project.ProjectId" />
+
+                <label class="form-label">Title</label>
+                <input class="form-control"
+                       id="taskTitle"
+                       placeholder="Task title" />
+
+                <label class="form-label mt-3">Assign to</label>
+                <select class="form-select" id="taskAssignee">
+                    <option value="">Unassigned</option>
+                    @foreach (var m in Model.Project.Members)
+                    {
+                        <option value="@m.UserId">@m.FullName</option>
+                    }
+                </select>
+
+                <label class="form-label mt-3">Deadline</label>
+                <input type="date"
+                       class="form-control"
+                       id="taskDeadline" />
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-light"
+                        data-bs-dismiss="modal">
+                    Cancel
+                </button>
+
+                <button class="btn btn-primary"
+                        id="createTaskBtn">
+                    Create
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Edit task</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <input type="hidden" id="editTaskId" />
+
+                <label class="form-label fw-semibold">Title</label>
+                <input class="form-control mb-3" id="editTaskTitle" />
+
+                <label class="form-label fw-semibold">Assignee</label>
+                <select class="form-select mb-3" id="editTaskAssignee">
+                    <option value="">Unassigned</option>
+                    @foreach (var m in Model.Project.Members)
+                    {
+                        <option value="@m.UserId">@m.FullName</option>
+                    }
+                </select>
+
+                <label class="form-label fw-semibold">Deadline</label>
+                <input type="date" class="form-control mb-3" id="editTaskDeadline" />
+
+                <label class="form-label fw-semibold">Status</label>
+                <select class="form-select" id="editTaskStatus">
+                    <option value="0">Todo</option>
+                    <option value="1">In Progress</option>
+                    <option value="2">Review</option>
+                    <option value="3">Completed</option>
+                </select>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTaskEdit()">Save</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+
+    <script src="~/js/project-summary.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            let selectedUserId = null;
+
+            const emailInput = document.getElementById('memberEmail');
+            const resultList = document.getElementById('userSearchResult');
+            const selectedBox = document.getElementById('selectedUser');
+            const addBtn = document.getElementById('addMemberBtn');
+
+            // =========================
+            // SEARCH USER
+            // =========================
+            emailInput.addEventListener('input', async function () {
+                const email = this.value.trim();
+
+                if (email.length < 3) {
+                    resultList.classList.add('d-none');
+                    return;
+                }
+
+                const res = await fetch(`/api/users/search?email=${encodeURIComponent(email)}`);
+                if (!res.ok) return;
+
+                const users = await res.json();
+
+                resultList.innerHTML = '';
+                resultList.classList.remove('d-none');
+
+                users.forEach(u => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item list-group-item-action';
+                    li.innerHTML = `<strong>${u.fullName}</strong><br><small>${u.email}</small>`;
+
+                    li.onclick = () => {
+                        selectedUserId = u.id;
+
+                        selectedBox.innerHTML =
+                            `<strong>${u.fullName}</strong><br><small>${u.email}</small>`;
+                        selectedBox.classList.remove('d-none');
+
+                        resultList.classList.add('d-none');
+                        addBtn.disabled = false;
+                    };
+
+                    resultList.appendChild(li);
+                });
+            });
+
+            // =========================
+            // ADD MEMBER
+            // =========================
+            addBtn.addEventListener('click', async function () {
+
+                if (!selectedUserId) {
+                    alert("Please select a user");
+                    return;
+                }
+
+                const projectId = '@Model.Project.ProjectId';
+
+                        const res = await fetch("?handler=AddMember", {
+            method: "POST", // 🔥 DÒNG QUAN TRỌNG NHẤT
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken":
+                    document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({
+                projectId: projectId,
+                userId: selectedUserId
+            })
+        });
+
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert("Failed to add member");
+                }
+            });
+
+        });
+
+             function openRemoveModal(projectId, userId, fullName) {
+
+            document.getElementById("removeMemberName").innerText = fullName;
+
+            const form = document.getElementById("removeMemberForm");
+            form.action =
+                `?handler=RemoveMember&projectId=${projectId}&userId=${userId}`;
+
+            const modal = new bootstrap.Modal(
+                document.getElementById("confirmRemoveModal")
+            );
+
+            modal.show();
+        }
+    </script>
+    <script>
+        document.querySelectorAll('#projectTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function () {
+
+                // remove active
+                document.querySelectorAll('#projectTabs .nav-link')
+                    .forEach(t => t.classList.remove('active'));
+
+                // hide all content
+                document.querySelectorAll('.tab-content')
+                    .forEach(c => c.classList.add('d-none'));
+
+                // active current
+                this.classList.add('active');
+
+                // show target
+                const target = this.dataset.tab;
+                document.getElementById('tab-' + target)
+                    ?.classList.remove('d-none');
+            });
+        });
+    </script>
+    <script>
+        document.getElementById("createTaskBtn")
+            .addEventListener("click", async () => {
+
+                const title = document.getElementById("taskTitle").value.trim();
+
+                if (!title) {
+                    alert("Title is required");
+                    return;
+                }
+
+                const res = await fetch("?handler=CreateTask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "RequestVerificationToken":
+                            document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({
+                        projectId: document.getElementById("taskProjectId").value,
+                        title: title,
+                        assigneeId: document.getElementById("taskAssignee").value || null,
+                        deadline: document.getElementById("taskDeadline").value || null
+                    })
+                });
+
+                if (res.ok) {
+                    location.reload();
+                } else {
+                    alert("Create task failed");
+                }
+            });
+
+                async function deleteTask(taskId) {
+
+            if (!confirm("Delete this task?")) return;
+
+            const res = await fetch("?handler=DeleteTask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken":
+                        document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({ taskId })
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert("Delete failed");
+            }
+        }
+
+            function openEditTask(id, title, assigneeId, deadline, status) {
+
+            document.getElementById("editTaskId").value = id;
+            document.getElementById("editTaskTitle").value = title;
+            document.getElementById("editTaskAssignee").value = assigneeId || "";
+            document.getElementById("editTaskDeadline").value = deadline || "";
+            document.getElementById("editTaskStatus").value = status;
+
+            new bootstrap.Modal(
+                document.getElementById("editTaskModal")
+            ).show();
+        }
+
+        async function saveTaskEdit() {
+
+            const res = await fetch("?handler=EditTask", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken":
+                        document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify({
+                    taskId: document.getElementById("editTaskId").value,
+                    title: document.getElementById("editTaskTitle").value,
+                    assigneeId: document.getElementById("editTaskAssignee").value || null,
+                    deadline: document.getElementById("editTaskDeadline").value || null,
+                    status: parseInt(document.getElementById("editTaskStatus").value)
+                })
+            });
+
+            if (res.ok) {
+                location.reload();
+            } else {
+                alert("Update failed");
+            }
+        }
+    </script>
+
 }

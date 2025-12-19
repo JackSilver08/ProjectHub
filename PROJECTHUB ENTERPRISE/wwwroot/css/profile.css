@@ -272,3 +272,478 @@ hr.my-4 {
 .profile-info h3.fw-bold.mb-1 {
     animation: fadeInUp 0.6s ease-out 0.2s both;
 }
+
+/* ===== EDIT PROFILE MODAL STYLES ===== */
+/* ===== EDIT PROFILE MODAL - PREMIUM STYLING ===== */
+
+#editProfileModal {
+    backdrop-filter: blur(4px);
+}
+
+    #editProfileModal .modal-dialog {
+        max-width: 500px;
+    }
+
+    #editProfileModal .modal-content {
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+        overflow: hidden;
+    }
+
+        /* Header styling - thêm header ảo */
+        #editProfileModal .modal-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            z-index: 1;
+        }
+
+    /* Avatar section */
+    #editProfileModal .text-center {
+        position: relative;
+        margin-bottom: 2rem;
+        padding-top: 1.5rem;
+    }
+
+#avatarPreview {
+    border: 5px solid white;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    object-fit: cover;
+    width: 100px;
+    height: 100px;
+    position: relative;
+}
+
+    #avatarPreview::after {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: -6px;
+        right: -6px;
+        bottom: -6px;
+        border-radius: 50%;
+        border: 2px dashed #667eea;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    #avatarPreview:hover {
+        transform: scale(1.08) rotate(5deg);
+        box-shadow: 0 12px 32px rgba(102, 126, 234, 0.2), 0 0 0 1px rgba(102, 126, 234, 0.1);
+    }
+
+        #avatarPreview:hover::after {
+            opacity: 0.5;
+            animation: spin 10s linear infinite;
+        }
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* Avatar upload area */
+.avatar-upload-container {
+    position: relative;
+    display: inline-block;
+}
+
+.upload-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(102, 126, 234, 0.9);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+}
+
+.avatar-upload-container:hover .upload-overlay {
+    opacity: 1;
+}
+
+.upload-overlay i {
+    color: white;
+    font-size: 1.5rem;
+}
+
+#avatarFile {
+    display: block;
+}
+
+.avatar-upload-label {
+    display: block;
+    text-align: center;
+    margin-top: 0.75rem;
+    font-size: 0.85rem;
+    color: #667eea;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+    .avatar-upload-label:hover {
+        color: #764ba2;
+        text-decoration: underline;
+    }
+
+/* Form styling */
+#editProfileModal .form-label {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+    #editProfileModal .form-label::before {
+        content: '•';
+        color: #667eea;
+        font-size: 1.2rem;
+    }
+
+#editProfileModal .form-control {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.875rem 1.25rem;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #ffffff;
+    color: #4a5568;
+}
+
+    #editProfileModal .form-control:hover {
+        border-color: #cbd5e0;
+        background: #f8fafc;
+    }
+
+    #editProfileModal .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(102, 126, 234, 0.08);
+        background: white;
+        transform: translateY(-1px);
+        outline: none;
+    }
+
+/* Form groups with icon enhancement */
+.form-group-enhanced {
+    position: relative;
+}
+
+    .form-group-enhanced .form-control {
+        padding-left: 2.75rem;
+    }
+
+    .form-group-enhanced i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #a0aec0;
+        transition: color 0.3s ease;
+    }
+
+    .form-group-enhanced .form-control:focus + i {
+        color: #667eea;
+    }
+
+/* Modal footer */
+#editProfileModal .modal-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 1.5rem 2rem;
+    gap: 1rem;
+    background: #f9fafb;
+    border-radius: 0 0 16px 16px;
+}
+
+#editProfileModal .btn {
+    border-radius: 10px;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    letter-spacing: 0.3px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+    #editProfileModal .btn::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0;
+        height: 0;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.3);
+        transform: translate(-50%, -50%);
+        transition: width 0.6s, height 0.6s;
+    }
+
+    #editProfileModal .btn:hover::before {
+        width: 300px;
+        height: 300px;
+    }
+
+#editProfileModal .btn-secondary {
+    background: linear-gradient(135deg, #718096 0%, #4a5568 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(113, 128, 150, 0.2);
+}
+
+    #editProfileModal .btn-secondary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(113, 128, 150, 0.3);
+    }
+
+#editProfileModal .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+    #editProfileModal .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4), 0 0 0 1px rgba(102, 126, 234, 0.1);
+    }
+
+/* Success animation for save button */
+@keyframes pulse {
+    0% {
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.6);
+    }
+
+    100% {
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+}
+
+#editProfileModal .btn-primary:active {
+    animation: pulse 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    #editProfileModal .modal-dialog {
+        margin: 0.75rem;
+    }
+
+    #editProfileModal .modal-content {
+        border-radius: 12px;
+    }
+
+    #avatarPreview {
+        width: 85px;
+        height: 85px;
+    }
+
+    #editProfileModal .modal-footer {
+        padding: 1.25rem;
+        flex-direction: column;
+    }
+
+    #editProfileModal .btn {
+        width: 100%;
+        padding: 0.875rem;
+    }
+}
+
+/* Loading state for form submission */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+    .loading-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Floating animation for modal */
+@keyframes floatIn {
+    0% {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+#editProfileModal .modal-content {
+    animation: floatIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== CENTER EDIT PROFILE BUTTON ===== */
+
+/* Container cho nút Edit Profile */
+.profile-action-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+/* Nút Edit Profile */
+.profile-action-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.875rem 2.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: white;
+    box-shadow: 0 6px 20px rgba(13, 110, 253, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    min-width: 180px;
+}
+
+    .profile-action-button::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.7s;
+    }
+
+    .profile-action-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 30px rgba(13, 110, 253, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        color: white;
+    }
+
+        .profile-action-button:hover::before {
+            left: 100%;
+        }
+
+    .profile-action-button:active {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(13, 110, 253, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+
+    .profile-action-button i {
+        font-size: 1.1rem;
+        transition: transform 0.3s ease;
+    }
+
+    .profile-action-button:hover i {
+        transform: rotate(15deg) scale(1.1);
+    }
+
+    /* Nếu muốn giữ màu của modal (purple) thay vì Bootstrap blue */
+    .profile-action-button.modal-style {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+
+        .profile-action-button.modal-style:hover {
+            box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        }
+
+/* Responsive cho nút */
+@media (max-width: 768px) {
+    .profile-action-container {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+    }
+
+    .profile-action-button {
+        width: 100%;
+        max-width: 300px;
+        padding: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .profile-action-container {
+        margin-top: 1.5rem;
+        padding-top: 1.25rem;
+    }
+
+    .profile-action-button {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
+/* Animation cho nút */
+@keyframes pulseButton {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.03);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.profile-action-button.pulse {
+    animation: pulseButton 2s infinite;
+}
