@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Http.Features;
+using Microsoft.EntityFrameworkCore;
 using PROJECTHUB_ENTERPRISE.Data;
 using PROJECTHUB_ENTERPRISE.Hubs;
 
@@ -34,6 +35,10 @@ builder.Services.AddAuthentication("ProjectHubCookie")
         options.ExpireTimeSpan = TimeSpan.FromDays(7);
         options.SlidingExpiration = true;
     });
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100MB
+});
 
 builder.Services.AddAuthorization();
 builder.Services.AddSignalR();

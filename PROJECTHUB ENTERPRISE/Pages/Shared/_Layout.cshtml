@@ -46,20 +46,24 @@
             <!-- 🔔 NOTIFICATIONS -->
             <div class="dropdown">
                 <button class="btn btn-light position-relative"
-                        type="button"
                         data-bs-toggle="dropdown">
                     <i class="bi bi-bell"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                        3
+
+                    <span id="notify-badge"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">
                     </span>
                 </button>
 
                 <ul class="dropdown-menu dropdown-menu-end shadow"
                     style="width:300px">
+
                     <li class="dropdown-header fw-semibold">Notifications</li>
-                    <li><a class="dropdown-item small" href="#">📝 New task assigned</a></li>
-                    <li><a class="dropdown-item small" href="#">💬 New comment</a></li>
+
+                    <!-- 🔥 JS inject here -->
+                    <div id="notify-list"></div>
+
                     <li><hr class="dropdown-divider"></li>
+
                     <li>
                         <a class="dropdown-item text-center small"
                            asp-page="/Dashboard/Notifications">
@@ -68,7 +72,6 @@
                     </li>
                 </ul>
             </div>
-
             <!-- ➕ CREATE -->
             <button class="btn btn-primary btn-sm"
                     data-bs-toggle="modal"
@@ -83,10 +86,11 @@
                 var avatar = User.FindFirst("AvatarUrl")?.Value
                 ?? "/images/avatar-default.png";
 
-                <div class="dropdown">
+                <div class="dropdown user-dropdown">
                     <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2"
                             type="button"
-                            data-bs-toggle="dropdown">
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
 
                         <img src="@avatar"
                              class="rounded-circle border"
@@ -113,6 +117,7 @@
                     </ul>
                 </div>
             }
+
             else
             {
                 <a class="nav-link" asp-page="/Account/Login">Login</a>
@@ -144,18 +149,60 @@
     <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr/dist/browser/signalr.min.js"></script>
 
     @RenderSection("Scripts", required: false)
-   
 
     <script>
-                // Mở Console (F12) và chạy lệnh này
-        document.querySelectorAll('.dropdown-toggle').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.preventDefault();
-                var dropdown = new bootstrap.Dropdown(this);
-                dropdown.toggle();
-            });
+        document.addEventListener("DOMContentLoaded", function () {
+            document
+                .querySelectorAll('.user-dropdown .dropdown-toggle')
+                .forEach(btn => {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();   // chỉ chặn mặc định của nút user
+                        e.stopPropagation();  // không lan ra ngoài
+
+                        let instance = bootstrap.Dropdown.getInstance(this);
+                        if (!instance) {
+                            instance = new bootstrap.Dropdown(this);
+                        }
+                        instance.toggle();
+                    });
+                });
         });
     </script>
+    <script>
+        async function loadNotifications() {
+            const res = await fetch('/Dashboard/Notifications?handler=UnreadNotifications');
+            if (!res.ok) return;
+
+            const data = await res.json();
+
+            const badge = document.querySelector("#notify-badge");
+            const list = document.querySelector("#notify-list");
+
+            // 🔔 badge
+            badge.innerText = data.length;
+            badge.classList.toggle("d-none", data.length === 0);
+
+            // 📋 list
+            list.innerHTML = "";
+            data.forEach(n => {
+                const li = document.createElement("li");
+                li.innerHTML = `
+                    <a class="dropdown-item small"
+                       href="${n.linkUrl}">
+                       💬 ${n.message}
+                       <div class="text-muted small">${n.createdAt}</div>
+                    </a>`;
+                list.appendChild(li);
+            });
+        }
+
+        // load khi mở trang
+        loadNotifications();
+
+        // auto refresh mỗi 15s
+        setInterval(loadNotifications, 15000);
+    </script>
+
     <!-- CREATE PROJECT MODAL -->
     <div class="modal fade" id="createProjectModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">

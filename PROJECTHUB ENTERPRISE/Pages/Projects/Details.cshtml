@@ -1,10 +1,22 @@
 ﻿@page
 @model PROJECTHUB_ENTERPRISE.Pages.Projects.DetailsModel
+@using PROJECTHUB_ENTERPRISE.ViewModels
+@using PROJECTHUB_ENTERPRISE.Models
+@using TaskStatusEnum = PROJECTHUB_ENTERPRISE.Models.TaskStatus
+
 @{
+
 }
 
 
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 <input type="hidden" id="projectId" value="@Model.Project.ProjectId" />
+
+<input type="hidden"
+       name="__RequestVerificationToken"
+       value="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+
+
 
 <h2 class="fw-bold">@Model.Project.Name</h2>
 <p class="text-muted">@Model.Project.Description</p>
@@ -41,7 +53,7 @@ else
             <div class="card text-center">
                 <div class="card-body">
                     <h6>Total Tasks</h6>
-                    <h3>@Model.Project.TotalTasks</h3>
+                    <h3 id="totalTasks">@Model.Project.TotalTasks</h3>
                 </div>
             </div>
         </div>
@@ -50,7 +62,7 @@ else
             <div class="card text-center">
                 <div class="card-body">
                     <h6>Open</h6>
-                    <h3>@Model.Project.OpenTasks</h3>
+                    <h3 id="openTasks">@Model.Project.OpenTasks</h3>
                 </div>
             </div>
         </div>
@@ -59,7 +71,7 @@ else
             <div class="card text-center">
                 <div class="card-body">
                     <h6>Completed</h6>
-                    <h3>@Model.Project.CompletedTasks</h3>
+                    <h3 id="completedTasks">@Model.Project.CompletedTasks</h3>
                 </div>
             </div>
         </div>
@@ -132,13 +144,13 @@ else
                               asp-route-projectId="@Model.Project.ProjectId"
                               asp-route-userId="@m.UserId"
                               onsubmit="return confirm('Remove this member?')">
-                            <button class="btn btn-sm btn-outline-danger"
-                                    type="button"
-                                    onclick="openRemoveModal('@Model.Project.ProjectId',
-                                         '@m.UserId',
-                                         '@m.FullName')">
-                                Remove
-                            </button>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        onclick="openRemoveModal(
+                    '@Model.Project.ProjectId',
+                    '@m.UserId',
+                    '@m.FullName')">
+                                    Remove
+                                </button>
 
 
                         </form>
@@ -220,46 +232,105 @@ else
                     Cancel
                 </button>
 
-                <form method="post"
-                      id="removeMemberForm">
-                    <button class="btn btn-danger">
-                        Yes, remove
-                    </button>
-                </form>
+                
             </div>
 
         </div>
     </div>
 </div>
 </div>
-<div id="tab-board" class="tab-content mt-4 d-none">
-    <!-- BOARD HEADER -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold mb-0">Task board</h5>
+<div id="task-board">
+    <div id="tab-board" class="tab-content mt-4 d-none">
 
-        <button class="btn btn-sm btn-primary"
-                data-bs-toggle="modal"
-                data-bs-target="#addTaskModal">
-            + Add task
-        </button>
-    </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Task board</h5>
 
-    <div class="row g-3">
+            <button class="btn btn-sm btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addTaskModal">
+                + Add task
+            </button>
+        </div>
 
-        <!-- TODO -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header fw-semibold">Todo</div>
-                <div class="card-body d-flex flex-column gap-2">
-                    @foreach (var t in Model.Board.Todo)
-                    {
-                        <div class="card shadow-sm position-relative">
-                            <div class="card-body p-2">
+        <div class="d-flex flex-column gap-2">
 
-                                <!-- ⋯ MENU BUTTON -->
-                                <div class="dropdown position-absolute top-0 end-0 m-1">
-                                    <button class="btn btn-sm btn-light"
-                                            data-bs-toggle="dropdown">
+            @foreach (var t in Model.Board.Todo
+                        .Concat(Model.Board.InProgress)
+                        .Concat(Model.Board.Review)
+                        .Concat(Model.Board.Done)
+                        .OrderBy(t => t.Deadline))
+            {
+                <div class="task-wrapper" data-task-id="@t.Id">
+
+                    <!-- TASK HEADER -->
+                    <div class="task-card d-flex align-items-center justify-content-between px-3 py-2 rounded task-header"
+                         data-task-id="@t.Id"
+                         style="background:#e0e0e0; cursor:pointer">
+
+                        <!-- LEFT -->
+                        <div>
+                            <div class="fw-bold">
+                                @t.Title
+                                @if (t.Deadline.HasValue)
+                                {
+                                    <span class="text-muted">
+                                        - @t.Deadline.Value.ToString("dd/MM/yyyy")
+                                    </span>
+                                }
+                        </div>
+                        <small>@t.AssigneeName</small>
+                    </div>
+
+                    <!-- RIGHT -->
+                    <div class="d-flex gap-2">
+
+                        <!-- STATUS -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm fw-semibold dropdown-toggle
+@(t.Status == TaskStatusEnum.Completed ? "btn-success" :
+                                                                      t.Status == TaskStatusEnum.InProgress ? "btn-warning text-dark" :
+                                                                      t.Status == TaskStatusEnum.Review ? "btn-danger" :
+                                                                      "btn-secondary")"
+                                    data-bs-toggle="dropdown">
+                                @t.Status
+                            </button>
+
+
+                                <ul class="dropdown-menu" onclick="arguments[0].stopPropagation()">
+
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="changeTaskStatus('@t.Id', 0)">
+                                            Todo
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="changeTaskStatus('@t.Id', 1)">
+                                            In Progress
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="changeTaskStatus('@t.Id', 2)">
+                                            Review
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item"
+                                                onclick="changeTaskStatus('@t.Id', 3)">
+                                            Completed
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+
+                        @if (Model.Project.CurrentUserRole == "Manager")
+                            {
+                                <div class="dropdown">
+                                    <button class="btn btn-sm"
+                                            data-bs-toggle="dropdown"
+                                           >
                                         ⋯
                                     </button>
 
@@ -267,99 +338,198 @@ else
                                         <li>
                                             <button class="dropdown-item"
                                                     onclick="openEditTask(
-                '@t.Id',
-                '@t.Title',
-                '@t.AssigneeId',
-                '@(t.Deadline?.ToString("yyyy-MM-dd"))',
-                '@((int)t.Status)'
-            )">
-                                                ✏️ Edit
+                                                        '@t.Id',
+                                                        '@t.Title',
+                                                        '@t.AssigneeId',
+                                                        '@t.Deadline?.ToString("yyyy-MM-dd")',
+                                                        '@((int)t.Status)')">
+                                                Edit
                                             </button>
-
                                         </li>
                                         <li>
                                             <button class="dropdown-item text-danger"
                                                     onclick="deleteTask('@t.Id')">
-                                                🗑 Delete
+                                                Delete
                                             </button>
                                         </li>
                                     </ul>
                                 </div>
-
-                                <div class="fw-semibold">@t.Title</div>
-                                <small class="text-muted">
-                                    @t.AssigneeName ?? "Unassigned"
-                                </small>
-                            </div>
+                            }
                         </div>
-                    }
-                </div>
-            </div>
-        </div>
+                    </div>
+                    <!-- 🔽 TASK DETAIL -->
+                    <div class="collapse task-detail mt-1" id="task-detail-@t.Id">
+                        <div class="card card-body">
 
-        <!-- IN PROGRESS -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header fw-semibold">In Progress</div>
-                <div class="card-body d-flex flex-column gap-2">
-                    @foreach (var t in Model.Board.InProgress)
-                    {
-                        <div class="card shadow-sm">
-                            <div class="card-body p-2">
-                                <div class="fw-semibold">@t.Title</div>
-                                <small class="text-muted">
-                                    @t.AssigneeName ?? "Unassigned"
-                                </small>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
+                            <!-- COMMENT LIST -->
+                            <div class="comments" data-task-id="@t.Id">
+                                <div class="comment-list mb-2"></div>
 
-        <!-- REVIEW -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header fw-semibold">Review</div>
-                <div class="card-body d-flex flex-column gap-2">
-                    @foreach (var t in Model.Board.Review)
-                    {
-                        <div class="card shadow-sm">
-                            <div class="card-body p-2">
-                                <div class="fw-semibold">@t.Title</div>
-                                <small class="text-muted">
-                                    @t.AssigneeName ?? "Unassigned"
-                                </small>
-                            </div>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
+                                <!-- REPLY INFO -->
+                                <div class="reply-info small text-muted d-none mb-1"></div>
 
-        <!-- DONE -->
-        <div class="col-md-3">
-            <div class="card">
-                <div class="card-header fw-semibold">Done</div>
-                <div class="card-body d-flex flex-column gap-2">
-                    @foreach (var t in Model.Board.Done)
-                    {
-                        <div class="card shadow-sm bg-light">
-                            <div class="card-body p-2">
-                                <div class="fw-semibold text-decoration-line-through">
-                                    @t.Title
+                                <!-- COMMENT INPUT -->
+                                <textarea class="form-control form-control-sm comment-input"
+                                      rows="2"
+                                      placeholder="Write a comment..."
+                                      data-task-id="@t.Id"></textarea>
+
+                                <!-- 🔽 ATTACH FILE -->
+                                <input type="file"
+                                       name="Attachments"
+                                       class="form-control form-control-sm mt-1 comment-attachments"
+                                       data-task-id="@t.Id"
+                                       multiple />
+
+                                <div class="mt-1 d-flex gap-2">
+                                    <button class="btn btn-sm btn-primary"
+                                            onclick="postComment('@t.Id')">
+                                        Send
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-secondary d-none cancel-reply"
+                                            onclick="cancelReply('@t.Id')">
+                                        Cancel
+                                    </button>
                                 </div>
                             </div>
+
+                        </div>
+                    </div>
+
+
+                </div>
+            }
+
+        </div>
+    </div>
+
+</div>
+
+<div id="tab-wiki" class="tab-content mt-4 d-none">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">📘 Project Wiki</h5>
+
+        @if (Model.Project.CanEditWiki)
+        {
+            <button class="btn btn-sm btn-primary"
+                    onclick="openCreateWiki('@Model.Project.ProjectId')">
+                + New page
+            </button>
+        }
+    </div>
+
+    @if (!Model.Project.Wikis.Any())
+    {
+        <div class="text-muted fst-italic">
+            Chưa có trang Wiki nào.
+        </div>
+    }
+    else
+    {
+        <ul class="list-group">
+            @foreach (var w in Model.Project.Wikis)
+            {
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+
+                    <span style="cursor:pointer"
+                          onclick="openWikiDetail('@w.Id')">
+                        📄 <strong>@w.Title</strong>
+                    </span>
+
+                    @if (Model.Project.CanEditWiki)
+                    {
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary"
+                                    onclick="event.stopPropagation(); openWikiDetail('@w.Id')">
+                                View
+                            </button>
+
+                            <button class="btn btn-outline-danger"
+                                    onclick="event.stopPropagation(); deleteWiki('@w.Id')">
+                                Delete
+                            </button>
                         </div>
                     }
-                </div>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+<div id="tab-settings" class="tab-content mt-4 d-none">
+
+    <!-- PROJECT INFO -->
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            Project information
+        </div>
+        <div class="card-body">
+            <div class="mb-2">
+                <strong>Name:</strong> @Model.Project.Name
+            </div>
+            <div class="mb-2">
+                <strong>Description:</strong> @Model.Project.Description
+            </div>
+            <div class="mb-2">
+                <strong>Status:</strong>
+                <span class="badge @(Model.Project.IsArchived ? "bg-secondary" : "bg-success")">
+                    @(Model.Project.IsArchived ? "Archived" : "Active")
+                </span>
             </div>
         </div>
-
     </div>
+
+    <!-- OWNER -->
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            Project owner
+        </div>
+        <div class="card-body">
+            <div><strong>@Model.Project.Owner.FullName</strong></div>
+            <div class="text-muted">@Model.Project.Owner.Email</div>
+        </div>
+    </div>
+
+    <!-- MEMBERS -->
+    <div class="card mb-4">
+        <div class="card-header fw-semibold">
+            Members (@Model.Project.Members.Count)
+        </div>
+        <ul class="list-group list-group-flush">
+            @foreach (var m in Model.Project.Members)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    <div>
+                        <strong>@m.FullName</strong>
+                        <div class="text-muted small">@m.Email</div>
+                    </div>
+                    <span class="badge bg-secondary">@m.Role</span>
+                </li>
+            }
+        </ul>
+    </div>
+
+    <!-- DANGER ZONE -->
+    @if (Model.Project.CanEditSettings)
+    {
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white fw-semibold">
+                Danger zone
+            </div>
+            <div class="card-body">
+                <p class="text-danger mb-3">
+                    This action will permanently delete this project and all related data.
+                </p>
+                <button class="btn btn-danger"
+                        onclick="confirmDeleteProject()">
+                    Delete project permanently
+                </button>
+            </div>
+        </div>
+    }
 </div>
-<div id="tab-wiki" class="tab-content d-none"></div>
-<div id="tab-settings" class="tab-content d-none"></div>
 
 <!-- Pop up add task -->
 <div class="modal fade" id="addTaskModal" tabindex="-1">
@@ -462,220 +632,54 @@ else
     </div>
 </div>
 
+<!-- Pop up add wiki -->
+<div class="modal fade" id="wikiModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="wikiModalTitle">Wiki</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="wikiId" />
+
+                <div class="mb-3">
+                    <label>Title</label>
+                    <input class="form-control" id="wikiTitle" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Content</label>
+                    <textarea class="form-control" id="wikiContent" rows="6"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveWiki()">Save</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+<!-- Mention Modal -->
+<div class="modal fade" id="mentionModal" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Mention member</h6>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <ul class="list-group list-group-flush" id="mention-list"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
-
     <script src="~/js/project-summary.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-
-            let selectedUserId = null;
-
-            const emailInput = document.getElementById('memberEmail');
-            const resultList = document.getElementById('userSearchResult');
-            const selectedBox = document.getElementById('selectedUser');
-            const addBtn = document.getElementById('addMemberBtn');
-
-            // =========================
-            // SEARCH USER
-            // =========================
-            emailInput.addEventListener('input', async function () {
-                const email = this.value.trim();
-
-                if (email.length < 3) {
-                    resultList.classList.add('d-none');
-                    return;
-                }
-
-                const res = await fetch(`/api/users/search?email=${encodeURIComponent(email)}`);
-                if (!res.ok) return;
-
-                const users = await res.json();
-
-                resultList.innerHTML = '';
-                resultList.classList.remove('d-none');
-
-                users.forEach(u => {
-                    const li = document.createElement('li');
-                    li.className = 'list-group-item list-group-item-action';
-                    li.innerHTML = `<strong>${u.fullName}</strong><br><small>${u.email}</small>`;
-
-                    li.onclick = () => {
-                        selectedUserId = u.id;
-
-                        selectedBox.innerHTML =
-                            `<strong>${u.fullName}</strong><br><small>${u.email}</small>`;
-                        selectedBox.classList.remove('d-none');
-
-                        resultList.classList.add('d-none');
-                        addBtn.disabled = false;
-                    };
-
-                    resultList.appendChild(li);
-                });
-            });
-
-            // =========================
-            // ADD MEMBER
-            // =========================
-            addBtn.addEventListener('click', async function () {
-
-                if (!selectedUserId) {
-                    alert("Please select a user");
-                    return;
-                }
-
-                const projectId = '@Model.Project.ProjectId';
-
-                        const res = await fetch("?handler=AddMember", {
-            method: "POST", // 🔥 DÒNG QUAN TRỌNG NHẤT
-            headers: {
-                "Content-Type": "application/json",
-                "RequestVerificationToken":
-                    document.querySelector('input[name="__RequestVerificationToken"]').value
-            },
-            body: JSON.stringify({
-                projectId: projectId,
-                userId: selectedUserId
-            })
-        });
-
-                if (res.ok) {
-                    location.reload();
-                } else {
-                    alert("Failed to add member");
-                }
-            });
-
-        });
-
-             function openRemoveModal(projectId, userId, fullName) {
-
-            document.getElementById("removeMemberName").innerText = fullName;
-
-            const form = document.getElementById("removeMemberForm");
-            form.action =
-                `?handler=RemoveMember&projectId=${projectId}&userId=${userId}`;
-
-            const modal = new bootstrap.Modal(
-                document.getElementById("confirmRemoveModal")
-            );
-
-            modal.show();
-        }
-    </script>
-    <script>
-        document.querySelectorAll('#projectTabs .nav-link').forEach(tab => {
-            tab.addEventListener('click', function () {
-
-                // remove active
-                document.querySelectorAll('#projectTabs .nav-link')
-                    .forEach(t => t.classList.remove('active'));
-
-                // hide all content
-                document.querySelectorAll('.tab-content')
-                    .forEach(c => c.classList.add('d-none'));
-
-                // active current
-                this.classList.add('active');
-
-                // show target
-                const target = this.dataset.tab;
-                document.getElementById('tab-' + target)
-                    ?.classList.remove('d-none');
-            });
-        });
-    </script>
-    <script>
-        document.getElementById("createTaskBtn")
-            .addEventListener("click", async () => {
-
-                const title = document.getElementById("taskTitle").value.trim();
-
-                if (!title) {
-                    alert("Title is required");
-                    return;
-                }
-
-                const res = await fetch("?handler=CreateTask", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "RequestVerificationToken":
-                            document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({
-                        projectId: document.getElementById("taskProjectId").value,
-                        title: title,
-                        assigneeId: document.getElementById("taskAssignee").value || null,
-                        deadline: document.getElementById("taskDeadline").value || null
-                    })
-                });
-
-                if (res.ok) {
-                    location.reload();
-                } else {
-                    alert("Create task failed");
-                }
-            });
-
-                async function deleteTask(taskId) {
-
-            if (!confirm("Delete this task?")) return;
-
-            const res = await fetch("?handler=DeleteTask", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "RequestVerificationToken":
-                        document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: JSON.stringify({ taskId })
-            });
-
-            if (res.ok) {
-                location.reload();
-            } else {
-                alert("Delete failed");
-            }
-        }
-
-            function openEditTask(id, title, assigneeId, deadline, status) {
-
-            document.getElementById("editTaskId").value = id;
-            document.getElementById("editTaskTitle").value = title;
-            document.getElementById("editTaskAssignee").value = assigneeId || "";
-            document.getElementById("editTaskDeadline").value = deadline || "";
-            document.getElementById("editTaskStatus").value = status;
-
-            new bootstrap.Modal(
-                document.getElementById("editTaskModal")
-            ).show();
-        }
-
-        async function saveTaskEdit() {
-
-            const res = await fetch("?handler=EditTask", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "RequestVerificationToken":
-                        document.querySelector('input[name="__RequestVerificationToken"]').value
-                },
-                body: JSON.stringify({
-                    taskId: document.getElementById("editTaskId").value,
-                    title: document.getElementById("editTaskTitle").value,
-                    assigneeId: document.getElementById("editTaskAssignee").value || null,
-                    deadline: document.getElementById("editTaskDeadline").value || null,
-                    status: parseInt(document.getElementById("editTaskStatus").value)
-                })
-            });
-
-            if (res.ok) {
-                location.reload();
-            } else {
-                alert("Update failed");
-            }
-        }
-    </script>
-
+    <script src="~/js/project-details.js"></script>
+   
 }

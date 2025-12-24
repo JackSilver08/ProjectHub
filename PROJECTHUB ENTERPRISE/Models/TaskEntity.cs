@@ -6,10 +6,11 @@ namespace PROJECTHUB_ENTERPRISE.Models;
 [Table("tasks")]
 public class TaskEntity
 {
+    [Key] // 👈 BẮT BUỘC
     [Column("id")]
     public Guid Id { get; set; }
 
-    [Column("project_id")]   // 🔥 FIX Ở ĐÂY
+    [Column("project_id")]
     public Guid ProjectId { get; set; }
 
     [Column("title")]

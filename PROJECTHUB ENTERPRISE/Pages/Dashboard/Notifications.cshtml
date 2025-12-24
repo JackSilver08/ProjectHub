@@ -1,6 +1,18 @@
-﻿namespace PROJECTHUB_ENTERPRISE.Pages.Dashboard
-{
-    public class Notifications
+﻿@page
+@model PROJECTHUB_ENTERPRISE.Pages.Dashboard.NotificationsModel
+
+<h4 class="mb-3">🔔 Notifications</h4>
+
+<ul class="list-group">
+    @foreach (var n in Model.Notifications)
     {
+        <li class="list-group-item d-flex justify-content-between">
+            <a href="@n.LinkUrl">
+                @n.Message
+            </a>
+            <small class="text-muted">
+                @n.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")
+            </small>
+        </li>
     }
-}
+</ul>
