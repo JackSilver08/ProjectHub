@@ -1,40 +1,66 @@
-﻿<nav class="sidebar">
+﻿@{
+    var path = Context.Request.Path.Value?.ToLower() ?? "";
+}
+
+<nav class="sidebar">
     <ul class="nav flex-column px-2">
 
+        <!-- DASHBOARD -->
         <li class="nav-item">
-            <a class="nav-link active"
+            <a class="nav-link @(
+               path == "/" ||
+               path == "/pages" ||
+               path == "/pages/index"
+               ? "active" : ""
+                                             )"
                asp-page="/Dashboard/Index">
-                🏠 Dashboard
+                <i class="bi bi-speedometer2"></i>
+                <span>Dashboard</span>
             </a>
         </li>
 
+        <!-- PROJECTS -->
         <li class="nav-item">
-            <a class="nav-link"
+            <a class="nav-link @(
+               path.StartsWith("/projects") &&
+               !path.StartsWith("/projects/archive")
+               ? "active" : ""
+                                             )"
                asp-page="/Projects/Index">
-                📁 Projects
+                <i class="bi bi-folder2-open"></i>
+                <span>Projects</span>
             </a>
         </li>
 
+        <!-- TASKS -->
         <li class="nav-item">
-            <a class="nav-link"
+            <a class="nav-link @(path.StartsWith("/tasks") ? "active" : "")"
                asp-page="/Tasks/Index">
-                ✅ My Tasks
+                <i class="bi bi-check2-square"></i>
+                <span>My Tasks</span>
             </a>
         </li>
 
+        <!-- NOTIFICATIONS -->
         <li class="nav-item">
-            <a class="nav-link"
+            <a class="nav-link @(path == "/dashboard/notifications" ? "active" : "")"
                asp-page="/Dashboard/Notifications">
-                🔔 Notifications
+                <i class="bi bi-bell"></i>
+                <span>Notifications</span>
             </a>
         </li>
 
-        <hr />
+        <!-- DIVIDER -->
+        <li class="nav-item my-4">
+            <hr class="border-secondary opacity-50">
+        </li>
 
+        <!-- ARCHIVED -->
         <li class="nav-item">
-            <a class="nav-link text-muted"
+            <a class="nav-link text-muted @(path.StartsWith("/projects/archive") ? "active" : "")"
                asp-page="/Projects/Archive">
-                🗄 Archived Projects
+                <i class="bi bi-archive"></i>
+                <span>Archived Projects</span>
             </a>
         </li>
 

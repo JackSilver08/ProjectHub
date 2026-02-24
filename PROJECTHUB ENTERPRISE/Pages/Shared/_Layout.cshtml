@@ -12,26 +12,35 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
 
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    @RenderSection("Styles", required: false)
 </head>
 <body>
 
     <!-- TOP NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom px-3">
+    <nav class="navbar navbar-expand-lg px-4">
 
-        <!-- LEFT -->
-        <a class="navbar-brand fw-bold" asp-page="/Index">
-            PROJECTHUB
-        </a>
+        <!-- LEFT: Brand & Mobile Toggle -->
+        <div class="d-flex align-items-center">
+            <!-- Sidebar Toggle for Mobile -->
+            <button class="btn btn-light d-lg-none me-3 sidebar-toggle">
+                <i class="bi bi-list"></i>
+            </button>
 
-        <!-- TOGGLER -->
-        <button class="navbar-toggler"
+            <a class="navbar-brand fw-bold" asp-page="/Index">
+                PROJECTHUB
+            </a>
+        </div>
+
+        <!-- TOGGLER for Search on Mobile -->
+        <button class="navbar-toggler d-lg-none"
                 type="button"
                 data-bs-toggle="collapse"
                 data-bs-target="#topNav">
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <!-- CENTER (COLLAPSE ONLY SEARCH) -->
+        <!-- CENTER: Search Form -->
         <div class="collapse navbar-collapse" id="topNav">
             <form class="d-flex mx-lg-auto w-50">
                 <input class="form-control"
@@ -40,11 +49,11 @@
             </form>
         </div>
 
-        <!-- RIGHT (NEVER COLLAPSE) -->
+        <!-- RIGHT: User Actions -->
         <div class="d-flex align-items-center gap-3 ms-3">
 
             <!-- 🔔 NOTIFICATIONS -->
-            <div class="dropdown">
+            <div class="dropdown notification-dropdown">
                 <button class="btn btn-light position-relative"
                         data-bs-toggle="dropdown">
                     <i class="bi bi-bell"></i>
@@ -54,16 +63,10 @@
                     </span>
                 </button>
 
-                <ul class="dropdown-menu dropdown-menu-end shadow"
-                    style="width:300px">
-
+                <ul class="dropdown-menu dropdown-menu-end shadow">
                     <li class="dropdown-header fw-semibold">Notifications</li>
-
-                    <!-- 🔥 JS inject here -->
                     <div id="notify-list"></div>
-
                     <li><hr class="dropdown-divider"></li>
-
                     <li>
                         <a class="dropdown-item text-center small"
                            asp-page="/Dashboard/Notifications">
@@ -72,13 +75,13 @@
                     </li>
                 </ul>
             </div>
+
             <!-- ➕ CREATE -->
-            <button class="btn btn-primary btn-sm"
+            <button class="btn btn-create"
                     data-bs-toggle="modal"
                     data-bs-target="#createProjectModal">
-                + Create
+                <i class="bi bi-plus-lg"></i> Create
             </button>
-
 
             <!-- 👤 USER -->
             @if (User.Identity?.IsAuthenticated ?? false)
@@ -86,11 +89,12 @@
                 var avatar = User.FindFirst("AvatarUrl")?.Value
                 ?? "/images/avatar-default.png";
 
-                <div class="dropdown user-dropdown">
+                <div class="dropdown">
                     <button class="btn btn-light dropdown-toggle d-flex align-items-center gap-2"
                             type="button"
                             data-bs-toggle="dropdown"
-                            aria-expanded="false">
+                            aria-expanded="false"
+                            id="userDropdownBtn">
 
                         <img src="@avatar"
                              class="rounded-circle border"
@@ -103,7 +107,7 @@
                         </span>
                     </button>
 
-                    <ul class="dropdown-menu dropdown-menu-end shadow">
+                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdownBtn">
                         <li>
                             <a class="dropdown-item" asp-page="/Account/Profile">
                                 <i class="bi bi-person me-2"></i> Profile
@@ -117,10 +121,9 @@
                     </ul>
                 </div>
             }
-
             else
             {
-                <a class="nav-link" asp-page="/Account/Login">Login</a>
+                <a class="nav-link text-white" asp-page="/Account/Login">Login</a>
             }
 
         </div>
@@ -131,12 +134,12 @@
         <div class="row">
 
             <!-- SIDEBAR -->
-            <aside class="col-2 bg-light vh-100 border-end pt-3">
+            <aside class="col-lg-2 sidebar d-none d-lg-block">
                 @await Html.PartialAsync("_Sidebar")
             </aside>
 
             <!-- CONTENT -->
-            <main class="col-10 p-4">
+            <main class="col-lg-10 p-4">
                 @RenderBody()
             </main>
 
@@ -152,23 +155,43 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            document
-                .querySelectorAll('.user-dropdown .dropdown-toggle')
-                .forEach(btn => {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault();   // chỉ chặn mặc định của nút user
-                        e.stopPropagation();  // không lan ra ngoài
+          
 
-                        let instance = bootstrap.Dropdown.getInstance(this);
-                        if (!instance) {
-                            instance = new bootstrap.Dropdown(this);
-                        }
-                        instance.toggle();
-                    });
+            // Sidebar toggle for mobile
+            document.querySelector('.sidebar-toggle')?.addEventListener('click', function() {
+                document.querySelector('.sidebar').classList.toggle('d-block');
+                document.querySelector('.sidebar').classList.toggle('show');
+            });
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', function(e) {
+                const sidebar = document.querySelector('.sidebar');
+                if (window.innerWidth < 992 && sidebar &&
+                    !e.target.closest('.sidebar') &&
+                    !e.target.closest('.sidebar-toggle')) {
+                    sidebar.classList.remove('d-block', 'show');
+                }
+            });
+
+            // Animate elements on scroll
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('animate-fadeInUp');
+                    }
                 });
+            }, observerOptions);
+
+            // Observe elements you want to animate
+            document.querySelectorAll('.card, .table, .alert').forEach(el => observer.observe(el));
         });
-    </script>
-    <script>
+
+        // Notification functions
         async function loadNotifications() {
             const res = await fetch('/Dashboard/Notifications?handler=UnreadNotifications');
             if (!res.ok) return;
@@ -189,17 +212,22 @@
                 li.innerHTML = `
                     <a class="dropdown-item small"
                        href="${n.linkUrl}">
-                       💬 ${n.message}
-                       <div class="text-muted small">${n.createdAt}</div>
+                       <div class="d-flex align-items-start">
+                           <i class="bi bi-chat-text me-2 mt-1"></i>
+                           <div>
+                               <div class="fw-medium">${n.message}</div>
+                               <div class="text-muted small mt-1">${n.createdAt}</div>
+                           </div>
+                       </div>
                     </a>`;
                 list.appendChild(li);
             });
         }
 
-        // load khi mở trang
+        // Load notifications on page load
         loadNotifications();
 
-        // auto refresh mỗi 15s
+        // Auto refresh every 15s
         setInterval(loadNotifications, 15000);
     </script>
 
@@ -211,7 +239,7 @@
                 <form method="post" asp-page="/Projects/Create">
 
                     <div class="modal-header">
-                        <h5 class="modal-title fw-bold">Create New Project</h5>
+                        <h5 class="modal-title fw-bold text-white">Create New Project</h5>
                         <button type="button"
                                 class="btn-close"
                                 data-bs-dismiss="modal"></button>
@@ -220,7 +248,7 @@
                     <div class="modal-body">
 
                         <!-- Project Name -->
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <label class="form-label fw-semibold">Project Name</label>
                             <input name="Name"
                                    class="form-control"
@@ -229,22 +257,22 @@
                         </div>
 
                         <!-- Description -->
-                        <div class="mb-3">
+                        <div class="mb-4">
                             <label class="form-label fw-semibold">Description</label>
                             <textarea name="Description"
                                       class="form-control"
-                                      rows="3"
+                                      rows="4"
                                       placeholder="Short project description"></textarea>
                         </div>
 
                         <!-- Privacy -->
-                        <div class="form-check mb-2">
+                        <div class="form-check mb-3">
                             <input class="form-check-input"
                                    type="checkbox"
                                    name="IsPrivate"
                                    id="isPrivate">
                             <label class="form-check-label" for="isPrivate">
-                                Private project
+                                <i class="bi bi-lock me-2"></i>Private project
                             </label>
                         </div>
 
@@ -258,8 +286,8 @@
                         </button>
 
                         <button type="submit"
-                                class="btn btn-primary">
-                            Create Project
+                                class="btn btn-create">
+                            <i class="bi bi-plus-circle me-2"></i>Create Project
                         </button>
                     </div>
 

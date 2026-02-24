@@ -4,265 +4,247 @@
     ViewData["Title"] = "My Profile";
 }
 <link rel="stylesheet" href="~/css/profile.css" asp-append-version="true" />
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <header class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-2 gradient-text">My Profile</h1>
+            <p class="text-muted mb-0">Manage your account information and settings</p>
+        </div>
 
-<div class="profile-container container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-9 col-xl-8">
-            <div class="profile-card card shadow border-0 overflow-hidden">
-                <!-- ===== COVER ===== -->
-                <div class="profile-cover bg-primary bg-gradient"></div>
+        <a asp-page="/Dashboard/Index" class="btn btn-outline-primary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </header>
 
-                <div class="profile-card-body card-body px-4 pb-4">
-                    <!-- ===== AVATAR + BASIC INFO ===== -->
-                    <div class="profile-header d-flex align-items-end gap-4">
-                        <img src="@(
-                             string.IsNullOrEmpty(Model.CurrentUser?.AvatarUrl)
-                                 ? "/images/default-avatar.png"
-                                 : Model.CurrentUser.AvatarUrl
-                                                          )"
-                             class="profile-avatar rounded-circle border border-4 border-white shadow"
-                             width="120"
-                             height="120"
-                             alt="Profile Avatar" />
+    <!-- Profile Card -->
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <article class="card border-0 shadow-lg overflow-hidden animate-fadeInUp position-relative">
+                <!-- Cover -->
+                <div class="profile-cover"></div>
 
-                        <div class="profile-info flex-grow-1">
-                            <h3 class="fw-bold mb-1">
-                                @(
-                                                                string.IsNullOrWhiteSpace(Model.CurrentUser?.FullName)
+                <!-- Avatar -->
+                <div class="avatar-upload-container position-absolute" style="top: 100px; left: 2rem;">
+                    <img id="mainAvatar"
+                         class="profile-avatar"
+                         loading="lazy"
+                         src="@(string.IsNullOrEmpty(Model.CurrentUser?.AvatarUrl)
+                                                             ? "/images/avatar-default.png"
+                                                             : Model.CurrentUser.AvatarUrl)"
+                         alt="Profile Avatar" />
+                </div>
+
+                <!-- Content -->
+                <div class="card-body profile-card-body">
+                    <div class="row">
+                        <!-- Left -->
+                        <section class="col-lg-8">
+                            <h2 class="profile-name mb-2">
+                                @(string.IsNullOrWhiteSpace(Model.CurrentUser?.FullName)
                                                                 ? Model.CurrentUser?.Username
-                                                                : Model.CurrentUser!.FullName
-                                                                )
-                            </h3>
+                                                                : Model.CurrentUser!.FullName)
+                            </h2>
 
-                            <div class="profile-title text-muted mb-2">
-                                @(string.IsNullOrEmpty(Model.CurrentUser?.JobTitle)
-                                                                ? "Employee"
-                                                                : Model.CurrentUser.JobTitle)
-
+                            <div class="profile-title mb-3">
+                                @if (!string.IsNullOrEmpty(Model.CurrentUser?.JobTitle))
+                                {
+                                    <span>@Model.CurrentUser.JobTitle</span>
+                                }
                                 @if (!string.IsNullOrEmpty(Model.CurrentUser?.Department))
                                 {
-                                    <span> • @Model.CurrentUser.Department</span>
+                                    <span class="mx-2">•</span>
+                                    <span>@Model.CurrentUser.Department</span>
                                 }
                             </div>
 
-                            <div class="profile-email small text-muted">
-                                <i class="bi bi-envelope profile-icon me-1"></i>
-                                @Model.CurrentUser?.Email
-                            </div>
-                        </div>
+                            <div class="d-flex align-items-center gap-4 mb-4 flex-wrap">
+                                <!-- Email (FIX JS) -->
+                                <div class="profile-email">
+                                    <i class="bi bi-envelope profile-icon"></i>
+                                    <span>@Model.CurrentUser?.Email</span>
+                                </div>
 
-                        <div>
-                            @if (Model.CurrentUser?.IsActive == true)
+                                <!-- Status -->
+                                <div>
+                                    @if (Model.CurrentUser?.IsActive == true)
+                                    {
+                                        <span class="badge-active">
+                                            <i class="bi bi-check-circle"></i>Active
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge-inactive">
+                                            <i class="bi bi-x-circle"></i>Inactive
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Right -->
+                        <aside class="col-lg-4 text-lg-end">
+                            @if (Model.CurrentUser?.CreatedAt != null)
                             {
-                                <span class="profile-status-badge profile-status-active badge bg-success px-3 py-2">Active</span>
+                                <small class="text-muted d-block">Member Since</small>
+                                <strong>@Model.CurrentUser.CreatedAt.ToString("MMM dd, yyyy")</strong>
                             }
-                            else
-                            {
-                                <span class="profile-status-badge profile-status-inactive badge bg-secondary px-3 py-2">Inactive</span>
-                            }
-                        </div>
+                        </aside>
                     </div>
 
-                    <hr class="profile-divider my-4" />
+                    <hr class="my-4">
 
-                    <!-- ===== DETAILS ===== -->
-                    <div class="profile-details-grid row g-3">
+                    <!-- Detail Cards -->
+                    <section class="row g-4">
                         <div class="col-md-6">
-                            <div class="profile-detail-card border rounded-3 p-3 h-100">
-                                <div class="profile-detail-label text-muted small mb-1">
-                                    <i class="bi bi-person profile-icon me-1"></i> Username
+                            <div class="profile-detail-card">
+                                <div class="profile-detail-label">
+                                    <i class="bi bi-person profile-icon"></i> Username
                                 </div>
-                                <div class="profile-detail-value fw-semibold">
+                                <div class="profile-detail-value">
                                     @Model.CurrentUser?.Username
                                 </div>
                             </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <div class="profile-detail-card border rounded-3 p-3 h-100">
-                                <div class="profile-detail-label text-muted small mb-1">
-                                    <i class="bi bi-calendar profile-icon me-1"></i> Account Created
-                                </div>
-                                <div class="profile-detail-value fw-semibold">
-                                    @Model.CurrentUser!.CreatedAt.ToString("dd MMM yyyy • HH:mm")
+                        @if (Model.CurrentUser?.CreatedAt != null)
+                        {
+                            <div class="col-md-6">
+                                <div class="profile-detail-card">
+                                    <div class="profile-detail-label">
+                                        <i class="bi bi-calendar profile-icon"></i> Account Created
+                                    </div>
+                                    <div class="profile-detail-value">
+                                        @Model.CurrentUser.CreatedAt.ToString("dd MMM yyyy • HH:mm")
+                                    </div>
                                 </div>
                             </div>
+                        }
+                    </section>
+
+                    <!-- Actions -->
+                    <footer class="profile-actions">
+                        <div class="d-flex flex-wrap gap-3">
+                            <button class="btn btn-primary px-4"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editProfileModal">
+                                <i class="bi bi-pencil me-2"></i>Edit Profile
+                            </button>
+
+                            <a asp-page="/Account/ChangePassword"
+                               class="btn btn-outline-primary px-4">
+                                <i class="bi bi-shield-lock me-2"></i>Change Password
+                            </a>
                         </div>
-                    </div>
-
-               
-                    <!-- ===== ACTION ===== -->
-                    <div class="profile-action-container">
-                        <a class="profile-action-button btn btn-primary px-4"
-                           data-bs-toggle="modal"
-                           data-bs-target="#editProfileModal">
-                            <i class="bi bi-pencil me-2"></i> Edit Profile
-                        </a>
-                        <a asp-page="/Account/ChangePassword"
-                           class="btn btn-outline-secondary px-4">
-                            <i class="bi bi-shield-lock me-2"></i> Change Password
-                        </a>
-                    </div>
-
+                    </footer>
                 </div>
-            </div>
+            </article>
         </div>
     </div>
 </div>
 
-<!-- ===== EDIT PROFILE MODAL ===== -->
-<div class="modal fade" id="editProfileModal" tabindex="-1">
+<!-- ================= MODAL ================= -->
+
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <form id="editProfileForm" method="post">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold gradient-text">
+                    <i class="bi bi-person-gear me-2"></i>Edit Profile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form id="editProfileForm" method="post" autocomplete="off">
                 @Html.AntiForgeryToken()
 
-                <div class="text-center mb-3">
-                    <img id="avatarPreview"
-                         src="@(string.IsNullOrEmpty(Model.CurrentUser?.AvatarUrl)
-                                                              ? "/images/avatar-default.png"
-                                     : Model.CurrentUser.AvatarUrl)"
-                         class="rounded-circle mb-2"
-                         width="90" height="90" />
+                <div class="modal-body">
+                    <!-- Avatar -->
+                    <div class="text-center mb-4">
+                        <div class="avatar-upload-container mx-auto" style="width:120px;">
+                            <img id="avatarPreview"
+                                 loading="lazy"
+                                 class="rounded-circle border border-4 shadow"
+                                 width="120"
+                                 height="120"
+                                 src="@(string.IsNullOrEmpty(Model.CurrentUser?.AvatarUrl)
+                                                                         ? "/images/avatar-default.png"
+                                                                         : Model.CurrentUser.AvatarUrl)" />
 
-                    <input type="file"
-                           id="avatarFile"
-                           class="form-control"
-                           accept="image/*" />
+                            <label for="avatarFile" class="avatar-upload-btn">
+                                <i class="bi bi-camera"></i>
+                            </label>
 
-                    <input type="hidden"
-                           id="AvatarUrl"
-                           name="EditProfile.AvatarUrl" />
+                            <input id="avatarFile" type="file" class="d-none" accept="image/*" />
+                        </div>
 
-                </div>
+                        <input type="hidden"
+                               id="AvatarUrl"
+                               name="EditProfile.AvatarUrl"
+                               value="@Model.CurrentUser?.AvatarUrl" />
 
+                        <small class="text-muted d-block mt-2">
+                            Click camera icon to upload new photo
+                        </small>
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Full Name</label>
-                    <input class="form-control"
-                           name="EditProfile.FullName"
-                           value="@Model.CurrentUser?.FullName" />
-                </div>
+                    <!-- Fields -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Full Name</label>
+                        <input class="form-control"
+                               name="EditProfile.FullName"
+                               value="@Model.CurrentUser?.FullName" />
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Display Name (Username)</label>
-                    <input class="form-control"
-                           name="EditProfile.Username"
-                           value="@Model.CurrentUser?.Username" />
-                </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Username</label>
+                        <input class="form-control"
+                               name="EditProfile.Username"
+                               value="@Model.CurrentUser?.Username" />
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Email</label>
-                    <input class="form-control"
-                           type="email"
-                           name="EditProfile.Email"
-                           value="@Model.CurrentUser?.Email" />
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email"
+                               class="form-control"
+                               name="EditProfile.Email"
+                               value="@Model.CurrentUser?.Email" />
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(Model.CurrentUser?.JobTitle) || !string.IsNullOrEmpty(Model.CurrentUser?.Department))
+                    {
+                        <div class="row">
+                            @if (!string.IsNullOrEmpty(Model.CurrentUser?.JobTitle))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Job Title</label>
+                                    <input class="form-control"
+                                           name="EditProfile.JobTitle"
+                                           value="@Model.CurrentUser.JobTitle" />
+                                </div>
+                            }
+
+                            @if (!string.IsNullOrEmpty(Model.CurrentUser?.Department))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Department</label>
+                                    <input class="form-control"
+                                           name="EditProfile.Department"
+                                           value="@Model.CurrentUser.Department" />
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary"
-                            data-bs-dismiss="modal">
-                        Cancel
-                    </button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary">
-                        Save Changes
+                        <i class="bi bi-save me-2"></i>Save Changes
                     </button>
                 </div>
             </form>
-
-
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        const avatarInput = document.getElementById("avatarFile");
-        const avatarPreview = document.getElementById("avatarPreview");
-        const avatarUrlInput = document.getElementById("AvatarUrl");
-        const profileAvatar = document.querySelector(".profile-avatar");
-
-        avatarInput.addEventListener("change", async () => {
-            const file = avatarInput.files[0];
-            if (!file) return;
-
-            if (!file.type.startsWith("image/")) {
-                alert("Please select an image file");
-                return;
-            }
-            if (file.size > 2 * 1024 * 1024) {
-                alert("Image must be under 2MB");
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("upload_preset", "avatar_unsigned");
-
-            avatarPreview.style.opacity = "0.5";
-
-            const res = await fetch(
-                "https://api.cloudinary.com/v1_1/dkimznyid/image/upload",
-                {
-                    method: "POST",
-                    body: formData
-                }
-            );
-
-            const data = await res.json();
-
-            if (!data.secure_url) {
-                alert("Upload failed");
-                avatarPreview.style.opacity = "1";
-                return;
-            }
-
-            // 🔥 Force reload image
-            const url = data.secure_url;
-            const bust = "?t=" + Date.now();
-
-            avatarPreview.src = url + bust;
-            avatarUrlInput.value = url;
-            avatarPreview.style.opacity = "1";
-        });
-
-        document.getElementById("editProfileForm")
-            .addEventListener("submit", async (e) => {
-                e.preventDefault();
-
-                const formData = new FormData(e.target);
-
-                const res = await fetch("?handler=EditProfile", {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        "RequestVerificationToken":
-                            document.querySelector('input[name="__RequestVerificationToken"]').value
-                    }
-                });
-
-                const data = await res.json();
-                if (!data.success) return;
-
-                const bust = "?t=" + Date.now();
-
-                // 🔥 Update UI ngay
-                if (data.avatarUrl) {
-                    profileAvatar.src = data.avatarUrl + bust;
-                }
-
-                document.querySelector(".profile-info h3").innerText =
-                    data.fullName || data.username;
-
-                document.querySelector(".profile-email").innerText =
-                    data.email;
-
-                bootstrap.Modal.getInstance(
-                    document.getElementById("editProfileModal")
-                ).hide();
-            });
-    </script>
-
-
-}
-

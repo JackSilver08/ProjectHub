@@ -29,7 +29,7 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<long>("CommentId")
+                    b.Property<long?>("CommentId")
                         .HasColumnType("bigint")
                         .HasColumnName("comment_id");
 
@@ -374,10 +374,9 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
             modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.CommentAttachment", b =>
                 {
                     b.HasOne("PROJECTHUB_ENTERPRISE.Models.CommentEntity", "Comment")
-                        .WithMany()
+                        .WithMany("Attachments")
                         .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Comment");
                 });
@@ -410,6 +409,8 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
 
             modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.CommentEntity", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Replies");
                 });
 #pragma warning restore 612, 618

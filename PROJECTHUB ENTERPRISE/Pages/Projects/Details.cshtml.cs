@@ -120,7 +120,56 @@ namespace PROJECTHUB_ENTERPRISE.Pages.Projects
 
        
         }
+        public async Task<IActionResult> OnGetTimelineAsync(Guid id, string range = "30d")
+        {
+            int days = range switch
+            {
+                "14d" => 14,
+                "90d" => 90,
+                _ => 30
+            };
 
+            var from = DateTime.UtcNow.Date.AddDays(-(days - 1));
+
+            var tasks = await _db.Tasks
+                .Where(t => t.ProjectId == id &&
+                            (
+                                t.CreatedAt >= from
+                                || (t.Status == PROJECTHUB_ENTERPRISE.Models.TaskStatus.Completed
+                                    && t.UpdatedAt.HasValue
+                                    && t.UpdatedAt.Value >= from)
+                            ))
+                .Select(t => new { t.CreatedAt, t.UpdatedAt, t.Status })
+                .ToListAsync();
+
+            var labels = Enumerable.Range(0, days)
+                .Select(i => from.AddDays(i).ToString("yyyy-MM-dd"))
+                .ToList();
+
+            var created = labels.ToDictionary(x => x, _ => 0);
+            var completed = labels.ToDictionary(x => x, _ => 0);
+
+            foreach (var t in tasks)
+            {
+                // CreatedAt là DateTime thường
+                var cKey = t.CreatedAt.ToUniversalTime().Date.ToString("yyyy-MM-dd");
+                if (created.ContainsKey(cKey)) created[cKey]++;
+
+                // UpdatedAt là nullable -> check HasValue
+                if (t.Status == PROJECTHUB_ENTERPRISE.Models.TaskStatus.Completed && t.UpdatedAt.HasValue)
+                {
+                    var dKey = t.UpdatedAt.Value.ToUniversalTime().Date.ToString("yyyy-MM-dd");
+                    if (completed.ContainsKey(dKey)) completed[dKey]++;
+                }
+            }
+
+            return new JsonResult(new
+            {
+                labels,
+                created = labels.Select(l => created[l]).ToArray(),
+                completed = labels.Select(l => completed[l]).ToArray()
+            });
+        }
         // 🔥 ADD MEMBER
         public async Task<IActionResult> OnPostAddMemberAsync([FromBody] AddMemberRequest req)
         {
@@ -708,6 +757,26 @@ public async Task<IActionResult> OnPostCreateWikiAsync(
                 .Select(m => m.Groups[1].Value)
                 .Distinct()
                 .ToList();
+        }
+        public async Task<IActionResult> OnGetSummaryStatsAsync(Guid id)
+        {
+            var tasks = _db.Tasks.Where(t => t.ProjectId == id);
+
+            var todo = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Todo);
+            var inProgress = await tasks.CountAsync(t => t.Status == TaskStatusEnum.InProgress);
+            var review = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Review);
+            var completed = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Completed);
+
+            return new JsonResult(new
+            {
+                summary = new
+                {
+                    totalTasks = todo + inProgress + review + completed,
+                    openTasks = todo + inProgress + review,
+                    completedTasks = completed
+                },
+                chart = new { todo, inProgress, review, completed }
+            });
         }
         public async Task<IActionResult> OnGetProjectMembersAsync(Guid projectId)
         {

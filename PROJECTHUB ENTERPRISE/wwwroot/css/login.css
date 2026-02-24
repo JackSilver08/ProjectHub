@@ -1,0 +1,474 @@
+﻿/* =========================================================
+   LOGIN PAGE STYLES - PROFESSIONAL THEME
+========================================================= */
+
+/* Import shared theme variables */
+:root {
+    --primary-color: #01373e;
+    --primary-light: #015965;
+    --primary-dark: #00252a;
+    --secondary-color: #e6f4f1;
+    --accent-color: #00b894;
+    --text-dark: #333333;
+    --text-light: #666666;
+    --border-color: #e0e0e0;
+    --hover-light: #f8f9fa;
+    --shadow-sm: 0 2px 8px rgba(1, 55, 62, 0.08);
+    --shadow-md: 0 4px 16px rgba(1, 55, 62, 0.12);
+    --shadow-lg: 0 8px 32px rgba(1, 55, 62, 0.16);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Global body styles */
+body {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: var(--text-dark);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+::selection {
+    background-color: rgba(1, 55, 62, 0.15);
+    color: var(--primary-color);
+}
+
+/* =========================================================
+   LOGIN CONTAINER
+========================================================= */
+
+/* Container chính */
+.login-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+    /* Hiệu ứng nền */
+    .login-container::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 30% 30%, rgba(1, 89, 101, 0.08) 0%, transparent 50%);
+        z-index: 0;
+    }
+
+    .login-container::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -20%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(0, 184, 148, 0.05) 0%, transparent 70%);
+        z-index: 0;
+        border-radius: 50%;
+    }
+
+/* Card login */
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: none;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    transform: translateY(0);
+    transition: var(--transition);
+    backdrop-filter: blur(10px);
+}
+
+    .login-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-4px);
+    }
+
+/* Header card */
+.login-card-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    border-bottom: 3px solid var(--accent-color);
+    position: relative;
+    overflow: hidden;
+}
+
+    .login-card-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -50%;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at 70% 50%, rgba(0, 184, 148, 0.15) 0%, transparent 50%);
+        z-index: 0;
+    }
+
+.login-card-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: -0.5px;
+    position: relative;
+    z-index: 1;
+}
+
+.login-card-subtitle {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin-top: 0.5rem;
+    font-weight: 400;
+    position: relative;
+    z-index: 1;
+}
+
+/* Body card */
+.login-card-body {
+    padding: 2.5rem 2rem;
+}
+
+/* =========================================================
+   FORM STYLES - PROFESSIONAL INPUT DESIGN
+========================================================= */
+
+/* Form styles */
+.login-form .form-label {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    display: block;
+}
+
+.login-form .form-control {
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 0.875rem 1rem;
+    font-size: 1rem;
+    transition: var(--transition);
+    background: #f8fafc;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+    .login-form .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(1, 55, 62, 0.1);
+        background: white;
+        outline: none;
+    }
+
+    .login-form .form-control:hover:not(:focus) {
+        border-color: var(--primary-light);
+        background: white;
+    }
+
+    .login-form .form-control::placeholder {
+        color: #94a3b8;
+    }
+
+/* Error message */
+.alert-danger {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border: 2px solid #f87171;
+    color: #991b1b;
+    border-radius: var(--radius-sm);
+    padding: 0.875rem 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* =========================================================
+   CHECKBOX & FORM ELEMENTS
+========================================================= */
+
+/* Remember me checkbox */
+.form-check-input {
+    border: 2px solid var(--border-color);
+    width: 1.25em;
+    height: 1.25em;
+    margin-top: 0.15em;
+    cursor: pointer;
+    transition: var(--transition);
+    border-radius: var(--radius-sm);
+}
+
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='white' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.25rem rgba(1, 55, 62, 0.25);
+        border-color: var(--primary-color);
+    }
+
+    .form-check-input:hover {
+        border-color: var(--primary-light);
+    }
+
+.form-check-label {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 0;
+}
+
+/* =========================================================
+   ACTION LINKS
+========================================================= */
+
+/* Forgot password link */
+.forgot-password-link {
+    color: var(--primary-light);
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: var(--transition);
+    display: inline-block;
+}
+
+    .forgot-password-link:hover {
+        color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+/* =========================================================
+   BUTTONS - ENHANCED
+========================================================= */
+
+/* Submit button */
+.login-submit-btn,
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 0.93rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(1, 55, 62, 0.2);
+    width: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    border: 2px solid transparent;
+}
+
+    .login-submit-btn:hover,
+    .btn-primary:hover {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(1, 55, 62, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .login-submit-btn:active,
+    .btn-primary:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(1, 55, 62, 0.2);
+    }
+
+    .login-submit-btn:focus,
+    .btn-primary:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(1, 55, 62, 0.15);
+    }
+
+.btn-secondary {
+    background: white;
+    border: 2px solid var(--border-color);
+    color: var(--text-dark);
+    transition: var(--transition);
+}
+
+    .btn-secondary:hover {
+        background: var(--secondary-color);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+/* =========================================================
+   REGISTER SECTION
+========================================================= */
+
+/* Register link section */
+.register-section {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.register-text {
+    color: var(--text-light);
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.register-link {
+    color: var(--primary-light);
+    font-weight: 600;
+    text-decoration: none;
+    margin-left: 0.5rem;
+    transition: var(--transition);
+    display: inline;
+}
+
+    .register-link:hover {
+        color: var(--accent-color);
+        text-decoration: underline;
+    }
+
+/* =========================================================
+   VALIDATION & ERROR MESSAGES
+========================================================= */
+
+/* Validation error messages */
+.field-validation-error {
+    display: block;
+    margin-top: 0.375rem;
+    font-size: 0.85rem;
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.form-text.text-danger {
+    color: #dc3545 !important;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+
+@media (max-width: 576px) {
+    .login-container {
+        padding: 1rem;
+    }
+
+    .login-card {
+        max-width: 100%;
+        border-radius: var(--radius-md);
+    }
+
+    .login-card-header {
+        padding: 1.75rem 1.5rem;
+    }
+
+    .login-card-body {
+        padding: 1.5rem;
+    }
+
+    .login-card-title {
+        font-size: 1.5rem;
+    }
+
+    .login-card-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .login-form .form-control {
+        padding: 0.75rem 0.875rem;
+    }
+
+    .register-section {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .register-link {
+        margin-left: 0;
+        display: block;
+        margin-top: 0.5rem;
+    }
+}
+
+/* =========================================================
+   ANIMATIONS
+========================================================= */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.login-card {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Input animation on focus */
+.form-control {
+    animation: slideInLeft 0.4s ease;
+}
+
+/* =========================================================
+   UTILITY CLASSES
+========================================================= */
+
+.text-gradient {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}

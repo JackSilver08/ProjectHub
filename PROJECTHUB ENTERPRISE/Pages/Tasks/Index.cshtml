@@ -1,0 +1,337 @@
+﻿@page
+@model PROJECTHUB_ENTERPRISE.Pages.Tasks.IndexModel
+@using TaskStatusEnum = PROJECTHUB_ENTERPRISE.Models.TaskStatus
+
+@{
+    ViewData["Title"] = "Tasks";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/tasks.css" asp-append-version="true" />
+}
+
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+<input type="hidden"
+       name="__RequestVerificationToken"
+       value="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
+
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold mb-0">Tasks</h2>
+
+        <!-- Nếu bạn muốn cho phép tạo task từ trang này -->
+        <button class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#addTaskModal">
+            + Add task
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="row g-2 mb-3">
+        <div class="col-md-5">
+            <input name="q" value="@Model.Q" class="form-control" placeholder="Search task title..." />
+        </div>
+
+        <div class="col-md-3">
+            <select name="projectId" class="form-select">
+                <option value="">All projects</option>
+                @foreach (var p in Model.Projects)
+                {
+                    <option value="@p.ProjectId" selected="@(Model.ProjectId == p.ProjectId ? "selected" : null)">
+                        @p.Name
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="col-md-2">
+            <select name="status" class="form-select">
+                <option value="">All status</option>
+                <option value="0" selected="@(Model.Status == 0 ? "selected" : null)">Todo</option>
+                <option value="1" selected="@(Model.Status == 1 ? "selected" : null)">In Progress</option>
+                <option value="2" selected="@(Model.Status == 2 ? "selected" : null)">Review</option>
+                <option value="3" selected="@(Model.Status == 3 ? "selected" : null)">Completed</option>
+            </select>
+        </div>
+
+        <div class="col-md-2 d-grid">
+            <button class="btn btn-primary">Apply</button>
+        </div>
+    </form>
+
+    <!-- Task List -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">All Tasks</h5>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Title</th>
+                        <th>Project</th>
+                        <th>Assignee</th>
+                        <th>Status</th>
+                        <th>Deadline</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model.Tasks.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">No tasks found.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var t in Model.Tasks)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@t.Title</td>
+                                <td>
+                                    <a asp-page="/Projects/Details" asp-route-id="@t.ProjectId">
+                                        @t.ProjectName
+                                    </a>
+                                </td>
+                                <td>@(string.IsNullOrWhiteSpace(t.AssigneeName) ? "Unassigned" : t.AssigneeName)</td>
+
+                                <td>
+                                    <span class="badge
+                                            @(t.Status == TaskStatusEnum.Completed ? "bg-success" :
+                                                                                t.Status == TaskStatusEnum.InProgress ? "bg-warning text-dark" :
+                                                                                t.Status == TaskStatusEnum.Review ? "bg-danger" :
+                                                                                "bg-secondary")">
+                                        @t.Status
+                                    </span>
+                                </td>
+
+                                <td>
+                                    @(t.Deadline.HasValue? t.Deadline.Value.ToString("dd/MM/yyyy") : "-")
+                                </td>
+
+                                <td class="text-end">
+                                    <!-- Đổi status: ai cũng có thể đổi nếu bạn muốn, hoặc hạn chế theo quyền -->
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-secondary dropdown-toggle"
+                                                data-bs-toggle="dropdown">
+                                            Status
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><button class="dropdown-item" onclick="changeTaskStatus('@t.TaskId', 0)">Todo</button></li>
+                                            <li><button class="dropdown-item" onclick="changeTaskStatus('@t.TaskId', 1)">In Progress</button></li>
+                                            <li><button class="dropdown-item" onclick="changeTaskStatus('@t.TaskId', 2)">Review</button></li>
+                                            <li><button class="dropdown-item" onclick="changeTaskStatus('@t.TaskId', 3)">Completed</button></li>
+                                        </ul>
+                                    </div>
+
+                                    @if (t.CanManage)
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary ms-1"
+                                                onclick="openEditTask(
+                                                            '@t.TaskId',
+                                                            '@t.Title',
+                                                            '@t.ProjectId',
+                                                            '@t.AssigneeId',
+                                                            '@t.Deadline?.ToString("yyyy-MM-dd")',
+                                                            '@((int)t.Status)')">
+                                            Edit
+                                        </button>
+
+                                        <button class="btn btn-sm btn-outline-danger ms-1"
+                                                onclick="deleteTask('@t.TaskId')">
+                                            Delete
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Create Task Modal (tùy chọn) -->
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Create task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <label class="form-label">Project</label>
+                <select class="form-select" id="taskProjectId">
+                    <option value="">Select project...</option>
+                    @foreach (var p in Model.Projects)
+                    {
+                        <option value="@p.ProjectId">@p.Name</option>
+                    }
+                </select>
+
+                <label class="form-label mt-3">Title</label>
+                <input class="form-control" id="taskTitle" placeholder="Task title" />
+
+                <label class="form-label mt-3">Assign to (UserId)</label>
+                <input class="form-control" id="taskAssigneeId" placeholder="Optional assignee id..." />
+
+                <label class="form-label mt-3">Deadline</label>
+                <input type="date" class="form-control" id="taskDeadline" />
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="createTask()">Create</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Edit Task Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Edit task</h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="editTaskId" />
+                <input type="hidden" id="editTaskProjectId" />
+
+                <label class="form-label fw-semibold">Title</label>
+                <input class="form-control mb-3" id="editTaskTitle" />
+
+                <label class="form-label fw-semibold">AssigneeId</label>
+                <input class="form-control mb-3" id="editTaskAssigneeId" />
+
+                <label class="form-label fw-semibold">Deadline</label>
+                <input type="date" class="form-control mb-3" id="editTaskDeadline" />
+
+                <label class="form-label fw-semibold">Status</label>
+                <select class="form-select" id="editTaskStatus">
+                    <option value="0">Todo</option>
+                    <option value="1">In Progress</option>
+                    <option value="2">Review</option>
+                    <option value="3">Completed</option>
+                </select>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTaskEdit()">Save</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function token() {
+            return document.querySelector('input[name="__RequestVerificationToken"]').value;
+        }
+
+        async function changeTaskStatus(taskId, status) {
+            const res = await fetch("?handler=ChangeStatus", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                },
+                body: JSON.stringify({ taskId, status })
+            });
+
+            const result = await res.json();
+            if (result.success) location.reload();
+            else alert(result.message || "Change status failed");
+        }
+
+        async function deleteTask(taskId) {
+            if (!confirm("Delete this task?")) return;
+
+            const res = await fetch("?handler=Delete", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                },
+                body: JSON.stringify({ taskId })
+            });
+
+            const result = await res.json();
+            if (result.success) location.reload();
+            else alert(result.message || "Delete failed");
+        }
+
+        function openEditTask(taskId, title, projectId, assigneeId, deadline, status) {
+            document.getElementById("editTaskId").value = taskId;
+            document.getElementById("editTaskProjectId").value = projectId;
+            document.getElementById("editTaskTitle").value = title || "";
+            document.getElementById("editTaskAssigneeId").value = assigneeId || "";
+            document.getElementById("editTaskDeadline").value = deadline || "";
+            document.getElementById("editTaskStatus").value = status;
+
+            new bootstrap.Modal(document.getElementById("editTaskModal")).show();
+        }
+
+        async function saveTaskEdit() {
+            const data = {
+                taskId: document.getElementById("editTaskId").value,
+                projectId: document.getElementById("editTaskProjectId").value,
+                title: document.getElementById("editTaskTitle").value,
+                assigneeId: document.getElementById("editTaskAssigneeId").value || null,
+                deadline: document.getElementById("editTaskDeadline").value || null,
+                status: parseInt(document.getElementById("editTaskStatus").value, 10)
+            };
+
+            const res = await fetch("?handler=Edit", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (result.success) location.reload();
+            else alert(result.message || "Update failed");
+        }
+
+        async function createTask() {
+            const data = {
+                projectId: document.getElementById("taskProjectId").value,
+                title: document.getElementById("taskTitle").value,
+                assigneeId: document.getElementById("taskAssigneeId").value || null,
+                deadline: document.getElementById("taskDeadline").value || null
+            };
+
+            const res = await fetch("?handler=Create", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "RequestVerificationToken": token()
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await res.json();
+            if (result.success) location.reload();
+            else alert(result.message || "Create failed");
+        }
+    </script>
+}

@@ -8,7 +8,34 @@
 
 }
 
+@section Styles {
+    <link rel="stylesheet" href="~/css/projects.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/tasks.css" asp-append-version="true" />
+}
 
+<style>
+    .summary-stat {
+        overflow: hidden;
+    }
+
+    .summary-stat--primary {
+        background: linear-gradient(135deg, rgba(13,110,253,.10), rgba(255,255,255,0));
+    }
+
+    .summary-stat--warning {
+        background: linear-gradient(135deg, rgba(255,193,7,.14), rgba(255,255,255,0));
+    }
+
+    .summary-stat--success {
+        background: linear-gradient(135deg, rgba(25,135,84,.12), rgba(255,255,255,0));
+    }
+
+    .summary-chart-wrap {
+        height: 260px; /* quan trọng */
+        width: 100%;
+        position: relative;
+    }
+</style>
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 <input type="hidden" id="projectId" value="@Model.Project.ProjectId" />
 
@@ -17,6 +44,7 @@
        value="@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken" />
 
 
+<div class="projects-page projects-container">
 
 <h2 class="fw-bold">@Model.Project.Name</h2>
 <p class="text-muted">@Model.Project.Description</p>
@@ -47,52 +75,116 @@ else
 </div>
 <div id="tab-summary" class="tab-content mt-4">
 
-    <!-- STAT CARDS -->
-    <div class="row">
-        <div class="col-md-4">
-            <div class="card text-center">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h5 class="mb-0 fw-bold">Project overview</h5>
+            <div class="text-muted small">Overview of task progress & trends</div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-secondary" type="button" onclick="refreshSummary()">
+                Refresh
+            </button>
+            <button class="btn btn-sm btn-primary" type="button" onclick="switchTab('board')">
+                Go to board
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI CARDS -->
+    <div class="row g-3">
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 summary-stat summary-stat--primary">
                 <div class="card-body">
-                    <h6>Total Tasks</h6>
-                    <h3 id="totalTasks">@Model.Project.TotalTasks</h3>
+                    <div class="text-muted small">Total tasks</div>
+                    <div class="display-6 fw-bold mt-1" id="totalTasks">@Model.Project.TotalTasks</div>
+
+                    <div class="small text-muted mt-2">
+                        Completion rate: <span class="fw-semibold" id="completionRate">—</span>
+                    </div>
+                    <div class="progress mt-2" style="height:6px;">
+                        <div class="progress-bar" id="completionProgress" role="progressbar" style="width:0%"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card text-center">
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 summary-stat summary-stat--warning">
                 <div class="card-body">
-                    <h6>Open</h6>
-                    <h3 id="openTasks">@Model.Project.OpenTasks</h3>
+                    <div class="text-muted small">Open</div>
+                    <div class="display-6 fw-bold mt-1" id="openTasks">@Model.Project.OpenTasks</div>
+                    <div class="text-muted small mt-2">Tasks not completed yet</div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-4">
-            <div class="card text-center">
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 summary-stat summary-stat--success">
                 <div class="card-body">
-                    <h6>Completed</h6>
-                    <h3 id="completedTasks">@Model.Project.CompletedTasks</h3>
+                    <div class="text-muted small">Completed</div>
+                    <div class="display-6 fw-bold mt-1" id="completedTasks">@Model.Project.CompletedTasks</div>
+                    <div class="text-muted small mt-2">Done / approved</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Health</div>
+                    <div class="fw-bold mt-1" id="projectHealth">—</div>
+                    <div class="text-muted small mt-2" id="projectHealthHint">Based on completion rate</div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- CHARTS -->
-    <div class="row mt-5">
-        <div class="col-md-6">
-            <div class="card">
+    <div class="row g-3 mt-1">
+        <div class="col-12 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
-                    <h6 class="fw-semibold mb-3">Task status</h6>
-                    <canvas id="taskStatusChart"></canvas>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <div class="fw-semibold">Task status</div>
+                            <div class="text-muted small">Distribution by workflow</div>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleStatusChart('doughnut')">Donut</button>
+                            <button class="btn btn-outline-secondary" type="button" onclick="toggleStatusChart('bar')">Bar</button>
+                        </div>
+                    </div>
+
+                    <div class="summary-chart-wrap">
+                        <canvas id="taskStatusChart" height="260"></canvas>
+                    </div>
+
+                    <div class="text-muted small mt-2" id="statusChartHint">Tip: hover to see exact values</div>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card">
+        <div class="col-12 col-lg-7">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-body">
-                    <h6 class="fw-semibold mb-3">Tasks over time</h6>
-                    <canvas id="taskLineChart"></canvas>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <div class="fw-semibold">Tasks over time</div>
+                            <div class="text-muted small">Created vs completed trend</div>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary" type="button" onclick="setLineRange('14d')">14d</button>
+                            <button class="btn btn-outline-secondary" type="button" onclick="setLineRange('30d')">30d</button>
+                            <button class="btn btn-outline-secondary" type="button" onclick="setLineRange('90d')">90d</button>
+                        </div>
+                    </div>
+
+                    <div class="summary-chart-wrap">
+                        <canvas id="taskLineChart" height="260"></canvas>
+                    </div>
+
+                    <div class="text-muted small mt-2" id="lineChartHint">Tip: zoom by range buttons</div>
                 </div>
             </div>
         </div>
@@ -242,7 +334,7 @@ else
 <div id="task-board">
     <div id="tab-board" class="tab-content mt-4 d-none">
 
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="board-toolbar d-flex justify-content-between align-items-center mb-3">
             <h5 class="fw-bold mb-0">Task board</h5>
 
             <button class="btn btn-sm btn-primary"
@@ -252,7 +344,7 @@ else
             </button>
         </div>
 
-        <div class="d-flex flex-column gap-2">
+        <div class="task-board-list">
 
             @foreach (var t in Model.Board.Todo
                         .Concat(Model.Board.InProgress)
@@ -263,38 +355,35 @@ else
                 <div class="task-wrapper" data-task-id="@t.Id">
 
                     <!-- TASK HEADER -->
-                    <div class="task-card d-flex align-items-center justify-content-between px-3 py-2 rounded task-header"
-                         data-task-id="@t.Id"
-                         style="background:#e0e0e0; cursor:pointer">
+                    <div class="task-card task-header" data-task-id="@t.Id">
 
                         <!-- LEFT -->
-                        <div>
-                            <div class="fw-bold">
-                                @t.Title
+                        <div class="task-header-main">
+                            <div class="task-title-row">
+                                <span class="task-title-text">@t.Title</span>
                                 @if (t.Deadline.HasValue)
                                 {
-                                    <span class="text-muted">
-                                        - @t.Deadline.Value.ToString("dd/MM/yyyy")
+                                    <span class="task-deadline">
+                                        @t.Deadline.Value.ToString("dd/MM/yyyy")
                                     </span>
                                 }
+                            </div>
+                            <small class="task-assignee-name">@t.AssigneeName</small>
                         </div>
-                        <small>@t.AssigneeName</small>
-                    </div>
 
-                    <!-- RIGHT -->
-                    <div class="d-flex gap-2">
+                        <!-- RIGHT -->
+                        <div class="task-header-actions">
 
-                        <!-- STATUS -->
-                        <div class="dropdown">
-                            <button class="btn btn-sm fw-semibold dropdown-toggle
+                            <!-- STATUS -->
+                            <div class="dropdown">
+                                <button class="btn btn-sm fw-semibold dropdown-toggle task-status-btn
 @(t.Status == TaskStatusEnum.Completed ? "btn-success" :
                                                                       t.Status == TaskStatusEnum.InProgress ? "btn-warning text-dark" :
                                                                       t.Status == TaskStatusEnum.Review ? "btn-danger" :
                                                                       "btn-secondary")"
-                                    data-bs-toggle="dropdown">
-                                @t.Status
-                            </button>
-
+                                        data-bs-toggle="dropdown">
+                                    @t.Status
+                                </button>
 
                                 <ul class="dropdown-menu" onclick="arguments[0].stopPropagation()">
 
@@ -325,12 +414,13 @@ else
                                 </ul>
                             </div>
 
-                        @if (Model.Project.CurrentUserRole == "Manager")
+                            @if (Model.Project.CurrentUserRole == "Manager")
                             {
                                 <div class="dropdown">
-                                    <button class="btn btn-sm"
+                                    <button class="btn btn-sm btn-outline-secondary task-more-btn"
+                                            type="button"
                                             data-bs-toggle="dropdown"
-                                           >
+                                            aria-label="Task actions">
                                         ⋯
                                     </button>
 
@@ -358,39 +448,43 @@ else
                         </div>
                     </div>
                     <!-- 🔽 TASK DETAIL -->
-                    <div class="collapse task-detail mt-1" id="task-detail-@t.Id">
+                    <div class="collapse task-detail" id="task-detail-@t.Id">
                         <div class="card card-body">
 
                             <!-- COMMENT LIST -->
                             <div class="comments" data-task-id="@t.Id">
-                                <div class="comment-list mb-2"></div>
+                                <div class="comment-list"></div>
 
-                                <!-- REPLY INFO -->
-                                <div class="reply-info small text-muted d-none mb-1"></div>
+                                <div class="comment-composer">
+                                    <!-- REPLY INFO -->
+                                    <div class="reply-info small d-none"></div>
 
-                                <!-- COMMENT INPUT -->
-                                <textarea class="form-control form-control-sm comment-input"
-                                      rows="2"
-                                      placeholder="Write a comment..."
-                                      data-task-id="@t.Id"></textarea>
+                                    <!-- COMMENT INPUT -->
+                                    <textarea class="form-control form-control-sm comment-input"
+                                              rows="3"
+                                              placeholder="Write a comment..."
+                                              data-task-id="@t.Id"></textarea>
 
-                                <!-- 🔽 ATTACH FILE -->
-                                <input type="file"
-                                       name="Attachments"
-                                       class="form-control form-control-sm mt-1 comment-attachments"
-                                       data-task-id="@t.Id"
-                                       multiple />
+                                    <div class="comment-composer-footer">
+                                        <!-- 🔽 ATTACH FILE -->
+                                        <input type="file"
+                                               name="Attachments"
+                                               class="form-control form-control-sm comment-attachments"
+                                               data-task-id="@t.Id"
+                                               multiple />
 
-                                <div class="mt-1 d-flex gap-2">
-                                    <button class="btn btn-sm btn-primary"
-                                            onclick="postComment('@t.Id')">
-                                        Send
-                                    </button>
+                                        <div class="d-flex gap-2 ms-auto">
+                                            <button class="btn btn-sm btn-primary"
+                                                    onclick="postComment('@t.Id')">
+                                                Send
+                                            </button>
 
-                                    <button class="btn btn-sm btn-outline-secondary d-none cancel-reply"
-                                            onclick="cancelReply('@t.Id')">
-                                        Cancel
-                                    </button>
+                                            <button class="btn btn-sm btn-outline-secondary d-none cancel-reply"
+                                                    onclick="cancelReply('@t.Id')">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -678,8 +772,10 @@ else
     </div>
 </div>
 
+</div>
+
 @section Scripts {
-    <script src="~/js/project-summary.js"></script>
-    <script src="~/js/project-details.js"></script>
-   
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="~/js/project-summary.js" asp-append-version="true"></script>
+    <script src="~/js/project-details.js" asp-append-version="true"></script>
 }

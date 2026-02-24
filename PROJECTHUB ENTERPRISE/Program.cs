@@ -9,7 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // 1. Add services
 // =========================
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
 
 // ✅ API Controllers
 builder.Services.AddControllers();

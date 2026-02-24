@@ -1,0 +1,614 @@
+/* =========================================================
+   TASKS PAGE STYLES - PROFESSIONAL THEME
+========================================================= */
+
+:root {
+    --primary-color: #01373e;
+    --primary-light: #015965;
+    --primary-dark: #00252a;
+    --secondary-color: #e6f4f1;
+    --accent-color: #00b894;
+    --text-dark: #333333;
+    --text-light: #666666;
+    --border-color: #e0e0e0;
+    --hover-light: #f8f9fa;
+    --shadow-sm: 0 2px 8px rgba(1, 55, 62, 0.08);
+    --shadow-md: 0 4px 16px rgba(1, 55, 62, 0.12);
+    --shadow-lg: 0 8px 32px rgba(1, 55, 62, 0.16);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* =========================================================
+   TASKS CONTAINER
+========================================================= */
+
+.tasks-container {
+    animation: fadeIn 0.4s ease forwards;
+}
+
+.tasks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.tasks-header h1 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--text-dark);
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+/* =========================================================
+   TASK BOARD / KANBAN
+========================================================= */
+
+.task-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.task-column {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: var(--transition);
+}
+
+    .task-column:hover {
+        box-shadow: var(--shadow-md);
+    }
+
+.task-column-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .task-column-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+.task-count {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.task-list {
+    padding: 1rem;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+/* =========================================================
+   TASK CARDS
+========================================================= */
+
+.task-card {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    transition: var(--transition);
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+    .task-card:hover {
+        border-color: var(--primary-light);
+        box-shadow: 0 4px 12px rgba(1, 55, 62, 0.1);
+        transform: translateY(-2px);
+        cursor: grab;
+    }
+
+    .task-card:active {
+        cursor: grabbing;
+    }
+
+.task-title {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+    .task-title:hover {
+        color: var(--primary-color);
+    }
+
+.task-description {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.task-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.task-priority {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+    .task-priority.high {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .task-priority.medium {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .task-priority.low {
+        background: #d1f2eb;
+        color: #065f46;
+    }
+
+.task-assignee {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--secondary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 2px solid var(--border-color);
+    transition: var(--transition);
+}
+
+    .task-assignee:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 2px 8px rgba(1, 55, 62, 0.15);
+    }
+
+/* =========================================================
+   TASK LIST VIEW
+========================================================= */
+
+.tasks-list {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.tasks-list-header {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    color: white;
+    font-weight: 600;
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 1.5fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.tasks-list-item {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: grid;
+    grid-template-columns: 2fr 1.5fr 1fr 1.5fr;
+    gap: 1rem;
+    align-items: center;
+    transition: var(--transition);
+}
+
+    .tasks-list-item:hover {
+        background: #f8fafc;
+        box-shadow: inset 0 0 0 1px rgba(1, 55, 62, 0.05);
+    }
+
+    .tasks-list-item:last-child {
+        border-bottom: none;
+    }
+
+.task-item-title {
+    font-weight: 600;
+    color: var(--text-dark);
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+    .task-item-title:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+
+.task-item-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+    .task-item-status.open {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .task-item-status.in-progress {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .task-item-status.closed {
+        background: #d1fae5;
+        color: #047857;
+    }
+
+.task-item-date {
+    font-size: 0.85rem;
+    color: var(--text-light);
+}
+
+.task-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* =========================================================
+   TASK FORM / DETAILS
+========================================================= */
+
+.task-form {
+    max-width: 700px;
+    margin: 0 auto;
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+}
+
+    .form-section:last-child {
+        margin-bottom: 0;
+    }
+
+.form-section-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.form-control,
+.form-select,
+textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    transition: var(--transition);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    margin-bottom: 1rem;
+}
+
+    .form-control:focus,
+    .form-select:focus,
+    textarea:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(1, 55, 62, 0.1);
+        outline: none;
+    }
+
+    .form-control::placeholder {
+        color: #94a3b8;
+    }
+
+textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .form-group.full {
+        grid-template-columns: 1fr;
+    }
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-light));
+    border: none;
+    color: white;
+    padding: 0.875rem 2rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 15px rgba(1, 55, 62, 0.2);
+    flex: 1;
+    min-width: 150px;
+}
+
+    .btn-submit:hover {
+        background: linear-gradient(135deg, var(--primary-dark), var(--primary-color));
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(1, 55, 62, 0.3);
+    }
+
+.btn-cancel {
+    background: white;
+    border: 2px solid var(--border-color);
+    color: var(--text-dark);
+    padding: 0.875rem 2rem;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    flex: 1;
+    min-width: 150px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .btn-cancel:hover {
+        background: var(--secondary-color);
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+    }
+
+/* =========================================================
+   NO TASKS STATE
+========================================================= */
+
+.no-tasks {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-light);
+}
+
+    .no-tasks p {
+        font-size: 1.1rem;
+        margin: 1rem 0;
+    }
+
+.no-tasks-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+========================================================= */
+
+@media (max-width: 1200px) {
+    .task-board {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .tasks-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .tasks-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .task-board {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .task-list {
+        min-height: auto;
+    }
+
+    .tasks-list-header,
+    .tasks-list-item {
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+
+    .task-form {
+        padding: 1.5rem;
+    }
+
+    .form-group {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .tasks-header h1 {
+        font-size: 1.25rem;
+    }
+
+    .task-board {
+        gap: 0.75rem;
+    }
+
+    .task-column-header {
+        padding: 1rem;
+    }
+
+    .task-column-header h3 {
+        font-size: 1rem;
+    }
+
+    .task-list {
+        padding: 0.75rem;
+        min-height: 300px;
+    }
+
+    .task-card {
+        padding: 0.75rem;
+    }
+
+    .tasks-list-header,
+    .tasks-list-item {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+
+    .task-form {
+        padding: 1.25rem;
+    }
+
+    .form-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .btn-submit,
+    .btn-cancel {
+        width: 100%;
+        flex: none;
+    }
+}
+
+/* =========================================================
+   ANIMATIONS
+========================================================= */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.task-board,
+.tasks-list {
+    animation: slideInUp 0.4s ease forwards;
+}
+
+.task-card {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+/* Drag and drop animation */
+@keyframes dragOver {
+    from {
+        background: white;
+    }
+
+    to {
+        background: #f0fdf4;
+        border-color: var(--accent-color);
+    }
+}
+
+.tasks-list.drag-over {
+    animation: dragOver 0.2s ease forwards;
+}
+
+/* =========================================================
+   UTILITY CLASSES
+========================================================= */
+
+.text-muted {
+    color: var(--text-light) !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.hover-lift {
+    transition: var(--transition);
+}
+
+    .hover-lift:hover {
+        transform: translateY(-3px);
+    }
+
+.shadow-soft {
+    box-shadow: var(--shadow-sm);
+}

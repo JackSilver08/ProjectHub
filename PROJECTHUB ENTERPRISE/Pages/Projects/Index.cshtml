@@ -1,0 +1,246 @@
+﻿@page
+@model PROJECTHUB_ENTERPRISE.Pages.Projects.IndexModel
+
+@{
+    ViewData["Title"] = "Projects";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/projects.css" asp-append-version="true" />
+}
+
+<div class="projects-page projects-container container-fluid mt-4">
+
+    <div class="projects-header d-flex justify-content-between align-items-center mb-3">
+        <h2 class="fw-bold mb-0">Projects</h2>
+    </div>
+
+    <!-- Filter -->
+    <div class="filter-section">
+        <form method="get" class="row g-2">
+            <div class="col-md-6">
+                <input name="q" value="@Model.Q" class="form-control" placeholder="Search project name..." />
+            </div>
+
+            <div class="col-md-3">
+                <select asp-for="Archived" class="form-select">
+                    <option value="">All</option>
+                    <option value="false">Active</option>
+                    <option value="true">Archived</option>
+                </select>
+            </div>
+
+
+            <div class="col-md-3 d-grid">
+                <button class="btn btn-primary">Apply</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Anti-forgery token (để JS đọc và gửi lên header) -->
+    <form method="post" id="antiforgery-form">
+        @Html.AntiForgeryToken()
+    </form>
+
+    <!-- Project List -->
+    <div class="card shadow-sm projects-table">
+        <div class="card-header">
+            <h5 class="mb-0">Your Projects</h5>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Project</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                @if (Model.Projects.Count == 0)
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            No projects found.
+                        </td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var p in Model.Projects)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@p.Name</td>
+                            <td>@p.Role</td>
+                            <td>
+                                <span class="badge bg-@(p.Status == "Active" ? "success" : "secondary")">
+                                    @p.Status
+                                </span>
+                            </td>
+
+                            <td class="text-end">
+                                <a asp-page="/Projects/Details"
+                                   asp-route-id="@p.ProjectId"
+                                   class="btn btn-sm btn-outline-primary">
+                                    View
+                                </a>
+
+                                @if (p.Role == "Manager")
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary ms-1"
+                                            onclick="openEditProject(
+                                                '@p.ProjectId',
+                                                '@p.Name',
+                                                '@(p.Description ?? "")',
+                                                '@p.Status'
+                                            )">
+                                        Edit
+                                    </button>
+
+                                    @if (p.Status == "Active")
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger ms-1"
+                                                onclick="toggleProject('@p.ProjectId', true)">
+                                            Change Status
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-success ms-1"
+                                                onclick="toggleProject('@p.ProjectId', false)">
+                                            Restore
+                                        </button>
+                                    }
+
+                                    <button class="btn btn-sm btn-outline-danger ms-1"
+                                            onclick="deleteProject('@p.ProjectId')">
+                                        Delete
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<!-- Edit Modal -->
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <input type="hidden" id="editProjectId" />
+
+                <div class="mb-3">
+                    <label class="form-label">Project Name</label>
+                    <input class="form-control" id="editProjectName" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="editProjectDescription"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="editProjectStatus">
+                        <option value="false">Active</option>
+                        <option value="true">Archived</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveProject()">Save</button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+</div>
+
+@section Scripts {
+<script>
+    function getAntiForgeryToken() {
+        return document.querySelector('#antiforgery-form input[name="__RequestVerificationToken"]').value;
+    }
+
+    function openEditProject(id, name, description, status) {
+        document.getElementById("editProjectId").value = id;
+        document.getElementById("editProjectName").value = name;
+        document.getElementById("editProjectDescription").value = description || "";
+        document.getElementById("editProjectStatus").value = (status === "Archived") ? "true" : "false";
+
+        new bootstrap.Modal(document.getElementById("editProjectModal")).show();
+    }
+
+    async function saveProject() {
+        const data = {
+            projectId: document.getElementById("editProjectId").value,
+            name: document.getElementById("editProjectName").value,
+            description: document.getElementById("editProjectDescription").value,
+            isArchived: document.getElementById("editProjectStatus").value === "true"
+        };
+
+        const res = await fetch("?handler=Edit", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken": getAntiForgeryToken()
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+        if (result.success) location.reload();
+        else alert(result.message || "Update failed");
+    }
+
+    async function toggleProject(projectId, archive) {
+        if (!confirm("Are you sure?")) return;
+
+        const res = await fetch("?handler=Toggle", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken": getAntiForgeryToken()
+            },
+            body: JSON.stringify({ projectId, archive })
+        });
+
+        const result = await res.json();
+        if (result.success) location.reload();
+        else alert(result.message || "Toggle failed");
+    }
+
+    async function deleteProject(projectId) {
+        if (!confirm("Are you sure you want to delete this project?")) return;
+
+        const res = await fetch("?handler=Delete", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken": getAntiForgeryToken()
+            },
+            body: JSON.stringify({ projectId })
+        });
+
+        const result = await res.json();
+        if (result.success) location.reload();
+        else alert(result.message || "Delete failed");
+    }
+</script>
+}

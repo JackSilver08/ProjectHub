@@ -166,6 +166,23 @@ function initializeTaskManagement() {
             }
         });
     }
+
+    const taskBoard = document.getElementById("task-board");
+    if (taskBoard) {
+        taskBoard.addEventListener("show.bs.dropdown", function (e) {
+            const wrapper = e.target.closest(".task-wrapper");
+            if (wrapper) {
+                wrapper.classList.add("task-wrapper--menu-open");
+            }
+        });
+
+        taskBoard.addEventListener("hide.bs.dropdown", function (e) {
+            const wrapper = e.target.closest(".task-wrapper");
+            if (wrapper) {
+                wrapper.classList.remove("task-wrapper--menu-open");
+            }
+        });
+    }
 }
 
 function openEditTask(id, title, assigneeId, deadline, status) {
@@ -366,26 +383,14 @@ async function deleteWiki(id) {
 // TAB MANAGEMENT
 // =========================
 function initializeTabManagement() {
-    document.querySelectorAll('#projectTabs .nav-link')
-        .forEach(function (tab) {
-            tab.addEventListener('click', function () {
-                document.querySelectorAll('#projectTabs .nav-link')
-                    .forEach(function (t) { t.classList.remove('active'); });
-
-                document.querySelectorAll('.tab-content')
-                    .forEach(function (c) { c.classList.add('d-none'); });
-
-                this.classList.add('active');
-
-                const target = this.dataset.tab;
-                const content = document.getElementById('tab-' + target);
-
-                if (content) {
-                    content.classList.remove('d-none');
-                }
-            });
+    document.querySelectorAll("#projectTabs .nav-link").forEach(function (tabEl) {
+        tabEl.addEventListener("click", function (e) {
+            e.preventDefault(); // tránh trường hợp <a> gây jump
+            setActiveTab(this.dataset.tab); // bật tab + lưu session + update hash
         });
+    });
 }
+
 
 // =========================
 // PROJECT DELETE
@@ -570,57 +575,68 @@ async function loadComments(taskId) {
 }
 
 function renderComments(comments) {
+    if (!comments || comments.length === 0) {
+        return '<div class="comment-empty-state">No comments yet. Start the conversation.</div>';
+    }
+
     let html = '';
     comments.forEach(function (comment) {
         const avatarUrl = comment.avatarUrl || '/images/avatar-default.png';
-        const createdAt = new Date(comment.createdAt).toLocaleString();
-        const content = renderContentWithMentions(comment.content);
+        const createdAt = formatDateTime(comment.createdAt);
+        const commentText = renderContentWithMentions(comment.content);
         const attachmentsHtml = renderAttachments(comment.attachments);
-        html += '<div class="comment mb-2" id="comment-' + comment.id + '">' +
-            '<div class="d-flex">' +
-            '<img src="' + avatarUrl + '" width="32" height="32" class="rounded-circle me-2">' +
-            '<div class="flex-grow-1">' +
-            '<div class="d-flex justify-content-between">' +
-            '<strong>' + comment.userName + '</strong>' +
-            '<small class="text-muted">' + createdAt + '</small>' +
+        const safeUserName = escapeHtml(comment.userName || 'Unknown user');
+        const safeUserForJs = escapeJsString(comment.userName || 'Unknown user');
+
+        html += '<div class="comment-item" id="comment-' + comment.id + '">' +
+            '<img src="' + avatarUrl + '" width="36" height="36" class="comment-avatar" alt="' + safeUserName + '">' +
+            '<div class="comment-bubble">' +
+            '<div class="comment-head">' +
+            '<strong class="comment-author">' + safeUserName + '</strong>' +
+            '<small class="comment-time">' + createdAt + '</small>' +
             '</div>' +
-            '<div class="mt-1">' + content + '</div>' +
+            '<div class="comment-body">' + (commentText || '<span class="text-muted fst-italic">Attachment only</span>') + '</div>' +
             attachmentsHtml +
-            '<button class="btn btn-sm btn-link p-0 mt-1" onclick="setReplyTo(\'' +
-            comment.taskId + '\', \'' + comment.id + '\', \'' + comment.userName + '\')">Reply</button>';
+            '<button class="btn btn-sm btn-link p-0 comment-reply-btn" onclick="setReplyTo(\'' +
+            comment.taskId + '\', \'' + comment.id + '\', \'' + safeUserForJs + '\')">Reply</button>';
 
 
         if (comment.replies && comment.replies.length > 0) {
+            html += '<div class="comment-replies">';
             comment.replies.forEach(function (reply) {
                 const replyAvatarUrl = reply.avatarUrl || '/images/avatar-default.png';
-                const replyCreatedAt = new Date(reply.createdAt).toLocaleString();
+                const replyCreatedAt = formatDateTime(reply.createdAt);
                 const replyContent = renderContentWithMentions(reply.content);
+                const safeReplyUserName = escapeHtml(reply.userName || 'Unknown user');
 
-                html += '<div class="reply mt-2 ms-4 border-start ps-3">' +
-                    '<div class="d-flex">' +
-                    '<img src="' + replyAvatarUrl + '" width="24" height="24" class="rounded-circle me-2">' +
-                    '<div class="flex-grow-1">' +
-                    '<div class="d-flex justify-content-between">' +
-                    '<strong>' + reply.userName + '</strong>' +
-                    '<small class="text-muted">' + replyCreatedAt + '</small>' +
+                html += '<div class="reply-item">' +
+                    '<img src="' + replyAvatarUrl + '" width="26" height="26" class="reply-avatar" alt="' + safeReplyUserName + '">' +
+                    '<div class="reply-bubble">' +
+                    '<div class="comment-head">' +
+                    '<strong class="comment-author">' + safeReplyUserName + '</strong>' +
+                    '<small class="comment-time">' + replyCreatedAt + '</small>' +
                     '</div>' +
-                    '<div class="mt-1">' + replyContent + '</div>' +
-                    '</div>' +
-                    '</div>' +
+                    '<div class="comment-body">' + (replyContent || '<span class="text-muted fst-italic">Attachment only</span>') + '</div>' +
                     '</div>';
             });
+            html += '</div>';
         }
 
-        html += '</div></div></div>';
+        html += '</div></div>';
     });
 
     return html;
 }
 
 function renderContentWithMentions(content) {
-    return content.replace(/@\{([0-9a-fA-F-]{36})\}\|([^ \n]+)/g,
-        '<span class="badge bg-info text-dark">@$2</span>'
+    const safeContent = escapeHtml(content || '');
+
+    const withMentions = safeContent.replace(
+        /@\{([0-9a-fA-F-]{36})\}\|([^ \n]+)/g,
+        '<span class="mention-pill">@$2</span>'
     );
+
+    return withMentions.replace(/\n/g, '<br>');
 }
 
 function setReplyTo(taskId, parentId, userName) {
@@ -629,7 +645,7 @@ function setReplyTo(taskId, parentId, userName) {
     const commentInput = document.querySelector('.comments[data-task-id="' + taskId + '"] .comment-input');
 
     if (replyInfo) {
-        replyInfo.innerHTML = 'Replying to <strong>' + userName + '</strong>';
+        replyInfo.innerHTML = 'Replying to <strong>' + escapeHtml(userName) + '</strong>';
         replyInfo.classList.remove('d-none');
     }
 
@@ -722,30 +738,33 @@ async function postComment(taskId) {
 // MAIN INITIALIZATION
 // =========================
 document.addEventListener("DOMContentLoaded", function () {
-    // Initialize all functionalities
     initializeMemberManagement();
     initializeTaskManagement();
     initializeWikiManagement();
     initializeTabManagement();
     initializeTaskComments();
 
+    restoreActiveTab(); // <-- thêm dòng này
+
     console.log("Project details initialized");
 });
+
 
 function renderAttachments(attachments) {
     if (!attachments || attachments.length === 0) return '';
 
-    let html = '<div class="mt-2 attachments">';
+    let html = '<div class="comment-attachments-list">';
     attachments.forEach(function (a) {
-        const icon = a.contentType.startsWith('image/')
-            ? '🖼️'
-            : '📎';
+        const safePath = escapeHtml(a.filePath || '#');
+        const safeName = escapeHtml(a.fileName || 'Attachment');
+        const isImage = (a.contentType || '').startsWith('image/');
+        const iconClass = isImage ? 'bi bi-file-earmark-image' : 'bi bi-paperclip';
 
         html += `
-            <div class="small">
-                ${icon}
-                <a href="${a.filePath}" target="_blank">
-                    ${a.fileName}
+            <div class="attachment-item">
+                <i class="${iconClass}" aria-hidden="true"></i>
+                <a href="${safePath}" class="attachment-link" target="_blank" rel="noopener noreferrer">
+                    ${safeName}
                 </a>
             </div>
         `;
@@ -754,3 +773,89 @@ function renderAttachments(attachments) {
 
     return html;
 }
+
+function formatDateTime(dateStr) {
+    const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+function escapeHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeJsString(value) {
+    return String(value || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'");
+}
+
+// =========================
+// TAB PERSISTENCE (KEEP CURRENT TAB AFTER RELOAD)
+// =========================
+function getProjectId() {
+    return document.getElementById("projectId")?.value || "unknown";
+}
+
+function tabStorageKey() {
+    return `project_details_active_tab_${getProjectId()}`;
+}
+
+function getActiveTabName() {
+    return document.querySelector("#projectTabs .nav-link.active")?.dataset.tab || "summary";
+}
+
+// Hàm bật tab (tái sử dụng cho click + restore + nút onclick ngoài HTML)
+function setActiveTab(tab, opts = { save: true, updateHash: true }) {
+    // nav
+    document.querySelectorAll("#projectTabs .nav-link").forEach(t => {
+        t.classList.toggle("active", t.dataset.tab === tab);
+    });
+
+    // content
+    document.querySelectorAll(".tab-content").forEach(c => c.classList.add("d-none"));
+    const content = document.getElementById("tab-" + tab);
+    if (content) content.classList.remove("d-none");
+
+    if (opts.save) {
+        sessionStorage.setItem(tabStorageKey(), tab);
+    }
+
+    if (opts.updateHash) {
+        // để F5 vẫn giữ tab (hash không gửi lên server)
+        history.replaceState(null, "", `${location.pathname}${location.search}#${tab}`);
+    }
+}
+
+// Để các chỗ HTML onclick="switchTab('board')" vẫn dùng được
+window.switchTab = function (tab) {
+    setActiveTab(tab);
+};
+
+function restoreActiveTab() {
+    const hashTab = (location.hash || "").replace("#", "");
+    const savedTab = sessionStorage.getItem(tabStorageKey());
+    const tab = hashTab || savedTab || "summary";
+    setActiveTab(tab, { save: true, updateHash: true });
+}
+
+function safeReload() {
+    sessionStorage.setItem(tabStorageKey(), getActiveTabName());
+    location.reload();
+}
+
+// Nếu bạn có thao tác submit form (RemoveMember dùng form) thì lưu tab trước khi submit
+document.addEventListener("submit", function () {
+    sessionStorage.setItem(tabStorageKey(), getActiveTabName());
+});
