@@ -28,14 +28,28 @@ namespace PROJECTHUB_ENTERPRISE.Pages.Projects
             if (userId == null) return;
 
             var projects = await _projectService.GetUserProjectsAsync(userId.Value, Q, Archived);
-            Projects = projects.Select(p => new ProjectRowVM
+            
+            var projectVMs = new List<ProjectRowVM>();
+            foreach (var p in projects)
             {
-                ProjectId = p.ProjectId,
-                Name = p.Name,
-                Description = p.Description,
-                Role = p.Role,
-                Status = p.Status
-            }).ToList();
+                var members = await _projectService.GetMembersAsync(p.ProjectId);
+                var owner = members.FirstOrDefault(m => m.Role == "Manager")?.FullName ?? "Unknown";
+
+                projectVMs.Add(new ProjectRowVM
+                {
+                    ProjectId = p.ProjectId,
+                    Name = p.Name,
+                    Description = p.Description,
+                    Role = p.Role,
+                    Status = p.Status,
+                    TotalTasks = p.TotalTasks,
+                    CompletedTasks = p.CompletedTasks,
+                    ProgressPercent = p.ProgressPercent,
+                    OwnerName = owner,
+                    Members = members.Take(5).ToList()
+                });
+            }
+            Projects = projectVMs;
         }
 
         // DTOs
@@ -89,5 +103,10 @@ namespace PROJECTHUB_ENTERPRISE.Pages.Projects
         public string? Description { get; set; }
         public string Role { get; set; } = "";
         public string Status { get; set; } = "";
+        public int TotalTasks { get; set; }
+        public int CompletedTasks { get; set; }
+        public double ProgressPercent { get; set; }
+        public string OwnerName { get; set; } = "";
+        public List<ProjectMemberInfo> Members { get; set; } = new();
     }
 }

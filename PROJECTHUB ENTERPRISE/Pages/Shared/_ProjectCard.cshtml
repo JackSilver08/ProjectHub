@@ -1,0 +1,97 @@
+@using PROJECTHUB_ENTERPRISE.Services.Interfaces
+@model ProjectRowVM
+
+<div class="project-card animate-fadeInUp">
+    <!-- Status Tab -->
+    <div class="project-status-tab @(Model.Status.ToLower() == "active" ? "active" : "archived")">
+        @Model.Status
+    </div>
+
+    <!-- Progress % -->
+    <div class="project-progress-badge">
+        @Model.ProgressPercent%
+    </div>
+
+    <!-- Title & Description -->
+    <h5 class="project-card-title">@Model.Name</h5>
+    <p class="project-card-desc">@(Model.Description ?? "No description provided.")</p>
+
+    <!-- Meta Info -->
+    <div class="project-meta">
+        <div class="project-meta-item">
+            <i class="bi bi-person"></i>
+            <span>Owner: <strong>@Model.OwnerName</strong></span>
+        </div>
+        <div class="project-meta-item">
+            <i class="bi bi-check2-square"></i>
+            <span>Tasks: <strong>@Model.CompletedTasks/@Model.TotalTasks</strong></span>
+        </div>
+        <div class="project-meta-item">
+            <i class="bi bi-calendar-event"></i>
+            <span>Deadline: <span class="text-muted small">No deadline set</span></span>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress mt-3 mb-3" style="height: 6px;">
+        <div class="progress-bar" role="progressbar" 
+             style="width: @Model.ProgressPercent%; background-color: #1f80ff;" 
+             aria-valuenow="@Model.ProgressPercent" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+
+    <!-- Footer: Avatars & Actions -->
+    <div class="project-card-footer d-flex justify-content-between align-items-center">
+        <!-- Avatar Group -->
+        <div class="avatar-group">
+            @foreach (var m in Model.Members)
+            {
+                <img src="@(string.IsNullOrEmpty(m.AvatarUrl) ? "/images/avatar-default.png" : m.AvatarUrl)" 
+                     class="avatar-group-item" title="@m.FullName" alt="@m.FullName" />
+            }
+            @if (Model.Members.Count >= 5)
+            {
+                <div class="avatar-plus">+</div>
+            }
+        </div>
+
+        <!-- Actions -->
+        <div class="project-actions">
+            <a asp-page="/Projects/Details" asp-route-id="@Model.ProjectId" 
+               class="btn-icon btn-view" title="View Project">
+                <i class="bi bi-eye"></i>
+            </a>
+
+            @if (Model.Role == "Manager")
+            {
+                <button class="btn-icon btn-edit" title="Edit Project"
+                        data-project-id="@Model.ProjectId"
+                        data-project-name="@Model.Name"
+                        data-project-desc="@(Model.Description ?? "")"
+                        data-project-status="@Model.Status"
+                        onclick="handleEditClick(this)">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+
+                @if (Model.Status == "Active")
+                {
+                    <button class="btn-icon btn-delete" title="Archive Project"
+                            onclick="toggleProject('@Model.ProjectId', true)">
+                        <i class="bi bi-archive"></i>
+                    </button>
+                }
+                else
+                {
+                    <button class="btn-icon btn-view" style="color: #10b981; border-color: #10b981;" title="Restore Project"
+                            onclick="toggleProject('@Model.ProjectId', false)">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                }
+
+                <button class="btn-icon btn-delete" title="Delete Project"
+                        onclick="deleteProject('@Model.ProjectId')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            }
+        </div>
+    </div>
+</div>

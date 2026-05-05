@@ -72,7 +72,7 @@ main > .projects-page {
 .projects-page .projects-table .card-header {
     background: linear-gradient(135deg, var(--projects-primary), #0e6373);
     color: #fff;
-    border-bottom: 0;
+    border-bottom: 0; 
     padding: 1rem 1.25rem;
 }
 
