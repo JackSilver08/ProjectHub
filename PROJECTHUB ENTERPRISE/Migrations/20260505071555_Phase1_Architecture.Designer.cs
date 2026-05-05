@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PROJECTHUB_ENTERPRISE.Data;
@@ -11,9 +12,11 @@ using PROJECTHUB_ENTERPRISE.Data;
 namespace PROJECTHUB_ENTERPRISE.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260505071555_Phase1_Architecture")]
+    partial class Phase1_Architecture
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -154,34 +157,6 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
                     b.ToTable("notifications", (string)null);
                 });
 
-            modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.TagEntity", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<string>("ColorCode")
-                        .IsRequired()
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)")
-                        .HasColumnName("color_code");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("ProjectId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_id");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("tags", (string)null);
-                });
-
             modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.TaskEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -247,23 +222,6 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
                     b.ToTable("tasks");
                 });
 
-            modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.TaskTagEntity", b =>
-                {
-                    b.Property<Guid>("TaskId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("task_id");
-
-                    b.Property<Guid>("TagId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tag_id");
-
-                    b.HasKey("TaskId", "TagId");
-
-                    b.HasIndex("TagId");
-
-                    b.ToTable("task_tags", (string)null);
-                });
-
             modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -313,29 +271,6 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("users", (string)null);
-                });
-
-            modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.VoteEntity", b =>
-                {
-                    b.Property<long>("CommentId")
-                        .HasColumnType("bigint")
-                        .HasColumnName("comment_id");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<bool>("IsUpvote")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_upvote");
-
-                    b.HasKey("CommentId", "UserId");
-
-                    b.ToTable("comment_votes", (string)null);
                 });
 
             modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.WikiPage", b =>
@@ -479,35 +414,11 @@ namespace PROJECTHUB_ENTERPRISE.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.TaskTagEntity", b =>
-                {
-                    b.HasOne("PROJECTHUB_ENTERPRISE.Models.TagEntity", "Tag")
-                        .WithMany("TaskTags")
-                        .HasForeignKey("TagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("PROJECTHUB_ENTERPRISE.Models.TaskEntity", "Task")
-                        .WithMany()
-                        .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tag");
-
-                    b.Navigation("Task");
-                });
-
             modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.CommentEntity", b =>
                 {
                     b.Navigation("Attachments");
 
                     b.Navigation("Replies");
-                });
-
-            modelBuilder.Entity("PROJECTHUB_ENTERPRISE.Models.TagEntity", b =>
-                {
-                    b.Navigation("TaskTags");
                 });
 #pragma warning restore 612, 618
         }

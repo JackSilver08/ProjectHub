@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
     const projectIdInput = document.getElementById("projectId");
     if (!projectIdInput?.value) return;
 
@@ -116,7 +116,7 @@
         await renderLineChart(currentRange);
     };
 
-    // init lần đầu
+    // init l?n d?u
     document.addEventListener("DOMContentLoaded", async () => {
         const s = await fetchSummaryStats();
         updateSummaryUI(s.summary);
@@ -125,7 +125,7 @@
         await renderLineChart(currentRange);
     });
 
-    // ====== SignalR giữ như cũ, chỉ bổ sung update line nếu muốn ======
+    // ====== SignalR gi? nhu cu, ch? b? sung update line n?u mu?n ======
     if (typeof signalR === "undefined") return;
 
     const connection = new signalR.HubConnectionBuilder()
@@ -133,12 +133,21 @@
         .withAutomaticReconnect()
         .build();
 
-    connection.on("ProjectStatsUpdated", async (data) => {
+        connection.on("ProjectStatsUpdated", async (data) => {
         updateSummaryUI(data.summary);
         updateStatusChart(data.chart);
+    });
 
-        // optional: refresh line chart khi có update
-        // await renderLineChart(currentRange);
+    connection.on("CommentAdded", (data) => {
+        if (typeof window.loadComments === "function") window.loadComments(data.taskId);
+    });
+
+    connection.on("CommentVoted", (data) => {
+        if (typeof window.loadComments === "function") window.loadComments(data.taskId);
+    });
+
+    connection.on("TaskStatusChanged", (data) => {
+        if (typeof window.updateTaskStatusUI === "function") window.updateTaskStatusUI(data.taskId, data.newStatus);
     });
 
     connection.start()

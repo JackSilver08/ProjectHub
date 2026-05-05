@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PROJECTHUB_ENTERPRISE.Models;
@@ -39,6 +39,15 @@ public class TaskEntity
 
     [Column("is_pinned")]
     public bool IsPinned { get; set; }
+
+    /// <summary>
+    /// Cờ đánh dấu task này có tính vào % tiến độ dự án không.
+    /// True = công việc thực tế (Design UI, Code API) → khi Done sẽ tăng %.
+    /// False = thảo luận, hành chính (Họp team, Brainstorm) → không ảnh hưởng %.
+    /// Mặc định: true.
+    /// </summary>
+    [Column("contributes_to_progress")]
+    public bool ContributesToProgress { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }

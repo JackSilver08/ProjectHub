@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using PROJECTHUB_ENTERPRISE.Data;
 using PROJECTHUB_ENTERPRISE.Hubs;
+using PROJECTHUB_ENTERPRISE.Services.Interfaces;
+using PROJECTHUB_ENTERPRISE.Services.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +15,14 @@ builder.Services.AddRazorPages().AddRazorRuntimeCompilation();
 
 // ✅ API Controllers
 builder.Services.AddControllers();
+
+// ✅ Business Logic Services (DI)
+builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IWikiService, WikiService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>

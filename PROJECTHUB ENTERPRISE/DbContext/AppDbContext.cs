@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PROJECTHUB_ENTERPRISE.Models;
 
 namespace PROJECTHUB_ENTERPRISE.Data
@@ -18,7 +18,9 @@ namespace PROJECTHUB_ENTERPRISE.Data
         public DbSet<NotificationEntity> Notifications { get; set; }
         public DbSet<CommentAttachment> CommentAttachments { get; set; }
 
-
+        public DbSet<TagEntity> Tags { get; set; }
+        public DbSet<TaskTagEntity> TaskTags { get; set; }
+        public DbSet<VoteEntity> CommentVotes { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
@@ -136,7 +138,46 @@ namespace PROJECTHUB_ENTERPRISE.Data
                  .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // ================= TAGS =================
+            builder.Entity<TagEntity>(e =>
+            {
+                e.ToTable("tags");
+                e.HasKey(t => t.Id);
+                e.Property(t => t.Id).HasColumnName("id");
+                e.Property(t => t.ProjectId).HasColumnName("project_id");
+                e.Property(t => t.Name).HasColumnName("name");
+                e.Property(t => t.ColorCode).HasColumnName("color_code");
+            });
 
+            // ================= TASK TAGS =================
+            builder.Entity<TaskTagEntity>(e =>
+            {
+                e.ToTable("task_tags");
+                e.HasKey(tt => new { tt.TaskId, tt.TagId });
+                e.Property(tt => tt.TaskId).HasColumnName("task_id");
+                e.Property(tt => tt.TagId).HasColumnName("tag_id");
+
+                e.HasOne(tt => tt.Task)
+                 .WithMany()
+                 .HasForeignKey(tt => tt.TaskId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(tt => tt.Tag)
+                 .WithMany(t => t.TaskTags)
+                 .HasForeignKey(tt => tt.TagId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // ================= COMMENT VOTES =================
+            builder.Entity<VoteEntity>(e =>
+            {
+                e.ToTable("comment_votes");
+                e.HasKey(v => new { v.CommentId, v.UserId });
+                e.Property(v => v.CommentId).HasColumnName("comment_id");
+                e.Property(v => v.UserId).HasColumnName("user_id");
+                e.Property(v => v.IsUpvote).HasColumnName("is_upvote");
+                e.Property(v => v.CreatedAt).HasColumnName("created_at");
+            });
         }
     }
 }

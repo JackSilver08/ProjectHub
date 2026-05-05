@@ -1,0 +1,683 @@
+MỤC LỤC TỔNG THỂ DỰ ÁN PROJECTHUB ENTERPRISE
+CHƯƠNG 1: TỔNG QUAN DỰ ÁN
+1.1. Bối cảnh & Mục tiêu
+1.2. Phạm vi dự án
+Các tính năng chính
+1.3. Tổng quan về Công nghệ 
+Backend: .NET 10 
+Database: PostgreSQL 16+ & EF Core
+Frontend: ASP.NET Core Razor Pages + Vue.js
+Real-time: SignalR
+Hạ tầng: Local Storage & Windows/Linux Server
+CHƯƠNG 2: ĐẶC TẢ YÊU CẦU NGHIỆP VỤ
+2.1. Phân quyền & Vai trò (User Roles)
+Ma trận phân quyền (Manager, Member, Viewer)
+2.2. Module Quản lý Dự án
+Tạo & Cấu hình Dự án
+Quản lý Wiki & Tài liệu
+Quản lý Tags/Labels tùy chỉnh
+2.3. Module Quản lý Công việc
+Quy trình xử lý Task
+Cơ chế Private Task
+Cơ chế Ghim (Pin) & Ưu tiên (Priority)
+Quy tắc tính % Tiến độ dự án
+2.4. Module Tương tác & Thảo luận
+Hệ thống Comment đa cấp
+Đính kèm file
+Cơ chế Voting & Mention (@username)
+2.5. Các tính năng hỗ trợ
+Hệ thống Thông báo (Notification Center & Email)
+Nhật ký hệ thống (Audit Logs)
+Tìm kiếm & Lọc (Search & Filter)
+CHƯƠNG 3: THIẾT KẾ HỆ THỐNG
+3.1. Kiến trúc tổng thể
+Sơ đồ kiến trúc
+Mô hình Modular Monolith
+3.2. Thiết kế Cơ sở dữ liệu 
+Sơ đồ ERD 
+Từ điển dữ liệu : Chi tiết các bảng Users, Projects, Tasks, Comments, AuditLogs...
+3.3. Thiết kế luồng dữ liệu
+Cơ chế Authentication (Identity)
+Luồng xử lý Real-time với SignalR
+Tích hợp Vue.js vào Razor Pages
+CHƯƠNG 4: THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG
+4.1. Sơ đồ trang (Sitemap)
+4.2. Luồng người dùng
+Flow: Tạo dự án mới
+Flow: Xử lý một Task từ A-Z
+Flow: Bảo mật Private Task
+4.3. Wireframe / Mockup các màn hình chính
+Dashboard dự án
+Chi tiết công việc
+Giao diện Wiki & Settings
+CHƯƠNG 5: QUY CHUẨN KỸ THUẬT 
+5.1. Quy ước đặt tên (Naming Convention)
+Quy ước C# (Backend)
+Quy ước Database (PostgreSQL)
+Quy ước Vue.js & CSS
+5.2. Cấu trúc thư mục
+Backend (.NET)
+Frontend (wwwroot)
+5.3. Quy trình phát triển
+Git Flow & Branching Strategy
+Quy trình Code Review & Pull Request
+CHƯƠNG 6: TRIỂN KHAI & VẬN HÀNH
+6.1. Thiết lập môi trường phát triển (Local Setup)
+Yêu cầu phần mềm & Tools
+Hướng dẫn chạy Migration & Seed Data
+6.2. Kế hoạch sao lưu & Phục hồi
+Backup Database
+Backup File Uploads
+
+
+TÊN DỰ ÁN: PROJECT HUB
+LOẠI TÀI LIỆU: ĐẶC TẢ YÊU CẦU & THIẾT KẾ HỆ THỐNG
+PHIÊN BẢN: 1.0
+DANH MỤC THUẬT NGỮ & VIẾT TẮT
+Phần này giải thích các thuật ngữ chuyên môn và nghiệp vụ được sử dụng trong tài liệu để thống nhất ngôn ngữ giữa đội ngũ kỹ thuật và quản lý.
+
+A. Thuật ngữ Kỹ thuật
+B. Thuật ngữ Nghiệp vụ 
+
+CHƯƠNG 1: TỔNG QUAN DỰ ÁN
+1.1. BỐI CẢNH VÀ MỤC TIÊU
+1.1.1. Bối cảnh
+Hiện tại, quy trình quản lý công việc và dự án nội bộ đang gặp một số vấn đề:
+Thông tin phân tán: Trao đổi công việc diễn ra trên nhiều kênh (Zalo, Email, Excel) khiến việc tra cứu lịch sử và ngữ cảnh rất khó khăn.
+Thiếu tính minh bạch: Khó theo dõi tiến độ tổng thể của một dự án hoặc khối lượng công việc của từng cá nhân.
+Giao diện phức tạp: Các phần mềm quản lý dự án chuyên sâu (như Jira, MS Project) thường quá phức tạp và cần thời gian đào tạo lâu, tạo rào cản cho nhân viên không chuyên kỹ thuật.
+
+1.1.2. Mục tiêu Dự án
+
+Xây dựng hệ thống ProjectHub với các tiêu chí cốt lõi:
+Giao diện quen thuộc: Lấy cảm hứng từ mô hình Sub/Thread để tạo môi trường làm việc thân thiện, tập trung vào thảo luận và sự minh bạch.
+Quy trình: Áp dụng quy trình trạng thái công việc (Workflow) trong quản lý.
+Tương tác thời gian thực: Giảm thiểu độ trễ thông tin thông qua hệ thống thông báo và bình luận tức thì.
+Lưu trữ tập trung: Toàn bộ tài liệu, file đính kèm và lịch sử thảo luận đều gắn liền với từng đầu việc cụ thể.
+
+1.2. PHẠM VI DỰ ÁN
+1.2.1. Các tính năng chính
+Hệ thống bao gồm các phân hệ (modules) chức năng sau:
+Phân hệ Quản trị (Admin & Identity):
+Đăng nhập, Đăng ký (hoặc Import user), Quản lý hồ sơ nhân viên.
+Phân quyền theo vai trò: Administrator, Manager, Member.
+Phân hệ Dự án (Projects/Subs):
+Tạo mới, chỉnh sửa thông tin dự án.
+Module Wiki: Soạn thảo tài liệu hướng dẫn, quy định nội bộ cho từng dự án.
+Quản lý thành viên và nhãn (Labels/Tags) riêng cho dự án.
+Phân hệ Công việc (Tasks/Threads):
+Tạo công việc với đầy đủ thuộc tính: Tiêu đề, Mô tả (Rich Text), Deadline, Độ ưu tiên, Người thực hiện.
+Private Task: Cơ chế bảo mật cho các công việc nhạy cảm (chỉ người liên quan mới thấy nội dung).
+Workflow: Chuyển đổi trạng thái (New -> In Progress -> Review -> Done -> Cancelled).
+Phân hệ Tương tác:
+Bình luận đa cấp (Nested Comments).
+Nhắc tên thành viên (@Mention) và gửi thông báo.
+Đính kèm tập tin vào Task và Comment.
+Hệ thống Voting (Upvote/Downvote) để thể hiện sự đồng thuận.
+Phân hệ Báo cáo & Tiện ích:
+Dashboard thống kê tiến độ dự án (%).
+Tìm kiếm toàn văn (Full-text search).
+Nhật ký hoạt động (Audit Logs).
+
+1.3. TỔNG QUAN VỀ CÔNG NGHỆ
+Dự án sử dụng nền tảng công nghệ Microsoft .NET mới nhất để đảm bảo hiệu năng và khả năng bảo trì dài hạn.
+
+1.3.1. Kiến trúc Tổng thể
+Mô hình: Modular Monolith (Một khối phân chia theo module nghiệp vụ).
+Lý do lựa chọn: Giảm độ phức tạp khi triển khai, dễ dàng debug và phát triển nhanh, phù hợp với quy mô team và user hiện tại.
+1.3.2. Ngôn ngữ & Framework (Backend)
+Ngôn ngữ: C#.
+Framework: ASP.NET Core 10.
+ORM: Entity Framework Core (Code-First approach).
+Real-time: SignalR Core (Dùng cho thông báo và cập nhật Comment).
+Authentication: ASP.NET Core Identity (Cookie-based auth).
+1.3.3. Cơ sở dữ liệu (Database)
+Database Engine: PostgreSQL 16
+Lý do lựa chọn: Mã nguồn mở, hiệu năng cao, hỗ trợ tốt JSONB (cho Audit Log) và Full-text Search
+File Storage: Lưu trữ vật lý trên Server thông qua PhysicalFileProvider, quản lý đường dẫn trong Database.
+1.3.4. Giao diện người dùng (Frontend)
+Server-side Rendering (SSR): Razor Pages. Đảm nhiệm việc render khung trang, routing, SEO và bảo mật phân quyền ban đầu.
+Client-side Interactivity: Vue.js 3.
+Vue.js sẽ được nhúng vào các vùng cần tương tác cao như: bình luận, Form chọn người (User Picker), Danh sách thông báo.
+Các trang tĩnh (About, Wiki view) chỉ dùng HTML/CSS thuần để tối ưu tốc độ.
+CSS Framework: Bootstrap 5 (tùy chỉnh theme màu sắc theo Brand công ty).
+1.3.5. Môi trường triển khai (Deployment Environment)
+OS: Windows Server (IIS) hoặc Linux (Ubuntu + Nginx/Kestrel).
+
+CHƯƠNG 2: ĐẶC TẢ YÊU CẦU NGHIỆP VỤ
+Chi tiết các hành vi, quy tắc và chức năng của hệ thống
+
+2.1. PHÂN QUYỀN & VAI TRÒ NGƯỜI DÙNG
+Hệ thống phân chia quyền hạn theo hai cấp độ: Cấp hệ thống và Cấp dự án.
+
+2.1.1. Định nghĩa Vai trò
+2.1.2. Ma trận Phân quyền
+Bảng dưới đây quy định chi tiết quyền hạn trong phạm vi một Dự án:
+2.2. MODULE QUẢN LÝ DỰ ÁN
+Đây là không gian làm việc chứa các đầu việc và tài liệu liên quan.
+
+2.2.1. Quản lý thông tin Dự án
+Tạo dự án mới:
+Thông tin bắt buộc: Tên dự án, Mã dự án (Project Code/Slug - dùng cho URL), Mô tả ngắn.
+Thiết lập Manager: Người tạo mặc định là Manager.
+Dashboard Dự án:
+Hiển thị Logo, Tên, Mô tả.
+Thanh tiến độ (Progress Bar): Tự động tính toán dựa trên số lượng Task hoàn thành (Logic chi tiết ở mục 2.3).
+Danh sách Manager hiển thị ở Sidebar để thành viên dễ liên hệ.
+Thành viên:
+Giao diện thêm thành viên bằng cách tìm kiếm theo Username hoặc Email.
+Có thể set quyền Manager cho thành viên khác (Một dự án có thể có nhiều Manager).
+2.2.2. Phân hệ Tài liệu (Wiki / Knowledge Base)
+Mỗi dự án tích hợp sẵn một tab "Wiki" để lưu trữ tri thức lâu dài.
+Mục đích: Lưu quy trình, hướng dẫn setup, coding convention, tài liệu nghiệp vụ... thay vì viết vào Task rồi bị trôi đi.
+Chức năng:
+Soạn thảo: Hỗ trợ Markdown Editor hoặc Rich Text (WYSIWYG).
+Lịch sử: Hiển thị Lần sửa cuối bởi ai, vào lúc nào.
+2.2.3. Quản lý Nhãn (Custom Labels/Tags)
+Để việc lọc và tìm kiếm hiệu quả, Manager có thể định nghĩa hệ thống nhãn riêng phù hợp với đặc thù dự án.
+Cấu trúc nhãn:
+Tên nhãn: Ví dụ "Backend", "Frontend", "Bug", "Urgent", "Design".
+Màu sắc: Mã Hex (VD: #FF0000 cho Urgent, #00FF00 cho Done).
+Sử dụng:
+Khi tạo/sửa Task, thành viên chọn từ danh sách nhãn đã định nghĩa.
+Một Task có thể gắn nhiều nhãn.
+Quy tắc: Chỉ Manager mới được thêm/sửa/xóa danh sách nhãn gốc (Global Tags của dự án).
+
+2.3. MODULE QUẢN LÝ CÔNG VIỆC
+Đây là thực thể chính của hệ thống, nơi mọi hoạt động và báo cáo diễn ra.
+
+2.3.1. Cấu trúc thông tin Task
+
+Mỗi Task bao gồm các trường thông tin sau:
+Tiêu đề: Ngắn gọn, súc tích.
+Mô tả chi tiết: Hỗ trợ Rich Text (In đậm, nghiêng, list, code block).
+Người thực hiện (Assignee): Một hoặc nhiều thành viên chịu trách nhiệm chính.
+Thời hạn (Deadline): Ngày/Giờ phải hoàn thành.
+Độ ưu tiên (Priority):
+Low: Làm khi rảnh.
+Medium: Bình thường (Mặc định).
+High: Cần làm sớm.
+Critical: Khẩn cấp, block tiến độ dự án.
+Tính tiến độ:
+True: Task này là công việc thực tế (VD: Design UI, Code API), khi hoàn thành sẽ tăng % dự án.
+False: Task này là thảo luận, hành chính, hoặc support (VD: Họp team, Brainstorm), hoàn thành hay không không ảnh hưởng % dự án.
+Chế độ riêng tư (Private Mode): Đánh dấu task nhạy cảm.
+2.3.2. Quy trình xử lý (Workflow)
+Hệ thống áp dụng Quy trình trạng thái, người dùng không thể tự định nghĩa trạng thái mới ngoài luồng này để đảm bảo thống nhất toàn công ty.
+Các trạng thái (States):
+New: Mới khởi tạo, chưa ai làm.
+In Progress: Assignee đã nhận việc và đang thực hiện.
+On Hold: Tạm dừng do thiếu tài nguyên hoặc bị Block bởi task khác.
+In Review: Đã làm xong, chờ Manager hoặc Tester kiểm tra.
+Done: Đã hoàn thành và được chấp nhận.
+Cancelled: Hủy bỏ, không làm nữa.
+Quy tắc chuyển đổi:
+Member: Chỉ được chuyển: New -> In Progress -> In Review. Không được tự ý chuyển sang Done (nếu quy trình yêu cầu duyệt) hoặc Cancelled.
+Manager: Có quyền chuyển sang bất kỳ trạng thái nào (bao gồm Done và Cancelled).
+2.3.3. Cơ chế Bảo mật
+Đây là tính năng quan trọng để bảo vệ thông tin nhạy cảm (Lương thưởng, Sa thải, Dự án bí mật) nhưng vẫn giữ tính minh bạch về khối lượng công việc.
+
+Quy tắc hiển thị:
+Người có quyền (Manager, Creator, Assignee): Nhìn thấy toàn bộ thông tin như Task bình thường.
+Người không có quyền (Member khác, Viewer):
+Trên danh sách: Vẫn thấy Task tồn tại.
+Tiêu đề: Bị ẩn, thay thế bằng văn bản hệ thống: "Restricted Task #[ID]".
+Nội dung/File: Ẩn hoàn toàn.
+Comment: Ẩn hoàn toàn.
+Trạng thái/Deadline: Vẫn hiển thị (để biết member kia đang bận hay rảnh).
+2.3.4. Logic Tính Tiến độ Dự án
+Tiến độ (%) của một Dự án (Sub) được tính tự động dựa trên các Task có cờ Contributes to Progress = True.
+Công thức:
+
+
+
+Lưu ý: Các Task trạng thái Cancelled sẽ bị loại khỏi mẫu số để không làm sai lệch báo cáo.
+
+2.4. MODULE TƯƠNG TÁC & THẢO LUẬN
+Mô phỏng trải nghiệm mạng xã hội để khuyến khích trao đổi.
+2.4.1. Bình luận & Báo cáo (Comments)
+Cấu trúc: Cây bình luận đa cấp (Nested Comments/Reply).
+Chức năng:
+Soạn thảo Markdown.
+Mention (@username): Gõ @ sẽ hiện danh sách thành viên dự án để chọn. Người được nhắc sẽ nhận thông báo.
+Báo cáo: Vì không có Sub-task, thành viên phải comment để cập nhật tiến độ nhỏ (VD: "Đã xong phần API, đang làm UI").
+2.4.2. Hệ thống Vote (Voting)
+Cơ chế: Nút Upvote (Mũi tên lên) và Downvote (Mũi tên xuống) tại Task và Comment.
+Mục đích:
+Dùng để biểu quyết nhanh (VD: Manager post một giải pháp, team vote Up nếu đồng ý).
+Thể hiện sự tín nhiệm cho một câu trả lời/giải pháp tốt.
+Quy tắc: Số lượng Vote KHÔNG ảnh hưởng đến thứ tự sắp xếp (Sorting) của Task trên Dashboard (để tránh việc Task quan trọng nhưng ít người quan tâm bị trôi xuống dưới).
+2.4.3. Quản lý File đính kèm (Attachments)
+File đính kèm được phân loại rõ ràng theo ngữ cảnh:
+Project Files: Tài liệu chung (Nằm ở Sidebar dự án).
+Task Attachments: File đề bài, mockup (Nằm ngay dưới nội dung Task).
+Comment Attachments: File kết quả công việc, file log lỗi (Nằm trong từng comment).
+
+2.5. CÁC TÍNH NĂNG HỖ TRỢ 
+2.5.1. Trung tâm Thông báo (Notification Center)
+Hệ thống gửi thông báo qua 2 kênh: In-App (Quả chuông) và Email.
+Các sự kiện kích hoạt (Triggers):
+Assigned: Khi người dùng được gán vào một Task.
+Mentioned: Khi người dùng được nhắc tên (@) trong Comment/Task.
+Deadline Approaching: Cảnh báo trước 24h khi Task sắp hết hạn.
+Status Changed: Khi Task mình đang theo dõi chuyển trạng thái (VD: Từ In Review sang Done).
+2.5.2. Nhật ký Thay đổi (Audit Log)
+Ghi lại lịch sử chỉnh sửa để quy trách nhiệm. Log được hiển thị ở tab "History" trong chi tiết Task.
+
+Các dữ liệu cần ghi:
+Thay đổi Tiêu đề/Nội dung Task.
+Thay đổi Trạng thái (VD: Ông A chuyển từ Doing -> Done).
+Thay đổi Deadline (Rất quan trọng).
+Thay đổi Người thực hiện (Assignee).
+2.5.3. Tìm kiếm & Lọc (Search & Filter)
+Bộ lọc (Filter):
+Theo trạng thái (New, Doing, Done).
+Theo Assignee (Tasks của tôi, Tasks của A).
+Theo Tags (Chỉ hiện Task "Bug" hoặc "Urgent").
+Sắp xếp (Sort):
+Newest: Mới tạo nhất.
+Deadline: Sắp hết hạn nhất (Ưu tiên hiển thị).
+Ghim (Pin): Các Task được Manager ghim sẽ luôn nằm trên cùng bất kể bộ lọc.
+
+CHƯƠNG 3: THIẾT KẾ HỆ THỐNG
+Chương này mô tả chi tiết kiến trúc kỹ thuật của ProjectHub, bao gồm sơ đồ hệ thống, cấu trúc mã nguồn và thiết kế cơ sở dữ liệu.
+
+3.1. KIẾN TRÚC TỔNG THỂ
+
+Hệ thống được thiết kế theo mô hình Modular Monolith trên nền tảng .NET 10. Đây là mô hình cân bằng tốt nhất giữa sự đơn giản khi triển khai và khả năng mở rộng trong tương lai.
+
+3.1.1. Sơ đồ Kiến trúc Hệ thống
+
+Hệ thống hoạt động theo mô hình Client-Server tiêu chuẩn. Dưới đây là sơ đồ minh họa luồng tương tác giữa các thành phần:
+
+
+Giải thích luồng dữ liệu:
+Client Layer:
+Giao diện tĩnh: Được render bởi Razor Pages (HTML/CSS).
+Giao diện động: Các vùng tương tác cao (Comment, Notification) sử dụng Vue.js gọi API ngầm.
+Real-time: Kết nối WebSocket qua SignalR để nhận thông báo tức thì.
+Application Layer:
+Chạy trên ASP.NET Core 10.
+Xử lý Routing, Authentication, Authorization.
+Chứa toàn bộ Business Logic (Quy trình Task, Tính toán tiến độ).
+Data Layer:
+Database: PostgreSQL 16+ chứa dữ liệu có cấu trúc (Users, Projects, Tasks).
+File Storage: Hệ thống tệp tin vật lý để lưu trữ file đính kèm (lưu vào /wwwroot/uploads).
+3.1.2. Mô hình Phân lớp (Layered Architecture)
+Dù là Monolith, mã nguồn vẫn được chia tách logic thành các lớp để đảm bảo Clean Code. Sơ đồ dưới đây thể hiện sự phụ thuộc giữa các lớp:
+
+
+Presentation Layer:
+Các PageModel (.cshtml.cs) xử lý request từ người dùng.
+Các ApiController phục vụ cho Vue.js gọi dữ liệu JSON.
+Business Logic Layer:
+Chứa các Service (VD: TaskService, ProjectService).
+Thực thi các quy tắc nghiệp vụ (VD: Kiểm tra quyền Private Task, tính % dự án).
+Infrastructure/Data Access Layer:
+Chứa ApplicationDbContext (Entity Framework Core).
+Xử lý ghi/đọc file vật lý.
+3.1.3. Cấu trúc Solution (.sln)
+Toàn bộ mã nguồn nằm trong một Project duy nhất để đơn giản hóa việc Build & Deploy. Cấu trúc thư mục được tổ chức như sau:
+
+ProjectHub.sln
+└── ProjectHub.Web (ASP.NET Core Web App)
+    ├── Areas/                      # CHIA MODULE THEO NGHIỆP VỤ
+    │   ├── Admin/                  # Trang quản trị hệ thống
+    │   ├── Projects/               # Các trang liên quan dự án (List, Settings, Wiki)
+    │   ├── Tasks/                  # Các trang liên quan Task (Create, Detail)
+    │   └── Identity/               # Đăng nhập, Đăng ký (Scaffolded)
+    │
+    ├── Data/                       # DATA ACCESS LAYER
+    │   ├── ApplicationDbContext.cs # Cấu hình EF Core
+    │   └── Migrations/             # Lịch sử thay đổi Database
+    │
+    ├── Entities/                   # DOMAIN MODELS (DB Tables)
+    │   ├── AppUser.cs
+    │   ├── Project.cs
+    │   ├── TaskItem.cs
+    │   └── ...
+    │
+    ├── Services/                   # BUSINESS LOGIC LAYER
+    │   ├── Implementations/
+    │   │   ├── FileService.cs      # Xử lý upload file
+    │   │   ├── NotiService.cs      # Xử lý thông báo
+    │   │   └── TaskService.cs      # Logic workflow task
+    │   └── Interfaces/             # Dependency Injection Interfaces
+    │
+    ├── Hubs/                       # REAL-TIME
+    │   └── ProjectHub.cs           # SignalR Hub chính
+    │
+    ├── wwwroot/                    # STATIC FILES
+    │   ├── js/
+    │   │   ├── vue-components/     # Chứa các file Vue.js
+    │   │   └── app.js              # Main JS
+    │   ├── css/                    # Bootstrap custom styles
+    │   └── uploads/                # Nơi lưu file đính kèm (Physical Storage)
+    │
+    ├── Program.cs                  # Entry Point & Configuration
+    └── appsettings.json            # Cấu hình Connection String
+
+
+3.1.4. Công nghệ & Thư viện Chính
+
+3.2. THIẾT KẾ CƠ SỞ DỮ LIỆU
+Hệ thống sử dụng PostgreSQL làm cơ sở dữ liệu chính. Việc thiết kế tuân thủ các nguyên tắc chuẩn hóa (Normalization) đến dạng chuẩn 3NF, đồng thời phi chuẩn hóa (Denormalization) một số trường hợp cụ thể (như tính toán tiến độ, cache tên user) để tối ưu hiệu năng đọc.
+
+3.2.1. Quy ước đặt tên & Kiểu dữ liệu
+Bảng (Table): Sử dụng snake_case số nhiều. Ví dụ: users, projects, task_comments.
+Cột (Column): Sử dụng snake_case. Ví dụ: created_at, is_active.
+Khóa chính (PK): Sử dụng UUID (v4) thay vì Integer tự tăng.
+Lý do: Tăng tính bảo mật, dễ dàng merge dữ liệu từ nhiều nguồn, phù hợp với kiến trúc phân tán nếu cần mở rộng sau này.
+Thời gian: Sử dụng TIMESTAMPTZ (Timestamp with Time Zone) để đảm bảo đồng nhất múi giờ khi triển khai Server ở các vị trí địa lý khác nhau.
+3.2.2. Sơ đồ Quan hệ Thực thể (ERD)
+Sơ đồ dưới đây mô tả mối quan hệ logic giữa các thực thể chính trong hệ thống:
+
+
+3.2.3. Từ điển Dữ liệu Chi tiết
+A. Nhóm Quản trị & Người dùng (Identity)
+1. Bảng asp_net_users (Mở rộng từ Identity)
+Lưu trữ thông tin tài khoản đăng nhập.
+B. Nhóm Dự án (Project Domain)
+2. Bảng projects
+Lưu trữ thông tin các dự án (Subs).
+3. Bảng project_members
+Bảng trung gian quản lý thành viên tham gia dự án.
+4. Bảng project_tags
+Lưu trữ danh sách nhãn (Labels) được định nghĩa riêng cho từng dự án.
+5. Bảng wiki_pages
+Lưu trữ tài liệu nội bộ của dự án.
+C. Nhóm Công việc (Task Domain)
+6. Bảng tasks
+Thực thể quan trọng nhất hệ thống.
+7. Bảng task_tags
+Liên kết nhiều-nhiều giữa Task và Tag.
+D. Nhóm Tương tác
+8. Bảng comments
+Lưu trữ thảo luận. Do số lượng comment có thể rất lớn (hàng triệu), ta sử dụng khóa chính BIGINT thay vì UUID để giảm dung lượng index và tăng tốc độ insert.
+9. Bảng attachments
+Quản lý tập trung các file đính kèm.
+10. Bảng audit_logs
+Lưu vết thay đổi hệ thống. Sử dụng JSONB của Postgres để lưu dữ liệu linh hoạt.
+11. Bảng notifications
+Lưu thông báo cho người dùng.
+3.2.4. Đánh chỉ mục (Indexing)
+Để đảm bảo truy vấn nhanh khi dữ liệu lớn, các chỉ mục sau BẮT BUỘC phải được tạo:
+Index tìm kiếm Task: CREATE INDEX idx_tasks_project_status ON tasks (project_id, status); -> Tối ưu cho việc lọc task trong Dashboard.
+Index thời hạn: CREATE INDEX idx_tasks_deadline ON tasks (deadline) WHERE status != 4 AND status != 5; -> Tối ưu cho job quét deadline (chỉ quét task chưa xong).
+Index Assignee: CREATE INDEX idx_tasks_assignee ON tasks (assignee_id); -> Để xem "Task của tôi".
+Index Comment: CREATE INDEX idx_comments_task ON comments (task_id, created_at); -> Để load comment theo thứ tự thời gian.
+Full-text Search: Tạo GIN Index cho cột title và description của bảng Tasks để hỗ trợ tìm kiếm từ khóa.
+3.3. THIẾT KẾ LUỒNG DỮ LIỆU (DATA FLOW DESIGN)
+Phần này mô tả chi tiết các quy trình xử lý dữ liệu quan trọng nhất của hệ thống, bao gồm xác thực người dùng, xử lý thời gian thực và sự kết hợp giữa Server-side (Razor) và Client-side (Vue.js).
+3.3.1. Cơ chế Xác thực & Phân quyền (Authentication & Authorization Flow)
+Hệ thống sử dụng ASP.NET Core Identity với cơ chế Cookie Authentication tiêu chuẩn.
+Luồng đăng nhập:
+
+
+Quy tắc Bảo mật:
+Cookie: Thiết lập HttpOnly, Secure, SameSite=Strict để chống XSS và CSRF.
+Authorization: Sử dụng Policy-based Authorization trong Controller.
+Ví dụ: [Authorize(Policy = "ProjectManager")] để chặn truy cập vào trang Settings của dự án.
+3.3.2. Luồng xử lý Thời gian thực (Real-time SignalR Flow)
+Sử dụng Library SignalR.
+Kịch bản: Người dùng A bình luận vào một Task, Người dùng B (đang xem Task đó) thấy bình luận hiện ra ngay lập tức mà không cần F5.
+
+
+Chiến lược Nhóm (Hub Groups):
+Project Group (Project_{Id}): Nhận thông báo chung của dự án (VD: Có Task mới).
+Task Group (Task_{Id}): Nhận comment, update trạng thái của task cụ thể.
+User Group (User_{Id}): Nhận thông báo cá nhân (VD: Được mention, được assign).
+3.3.3. Chiến lược Tích hợp Vue.js vào Razor Pages
+Đây là mô hình "Hybrid" giúp tận dụng tối đa sức mạnh của cả Server-rendering  và Client-rendering.
+
+Sơ đồ luồng dữ liệu Vue-Razor:
+
+
+Giải thích:
+Server Side: Khi User truy cập /Task/Details/1, Server lấy thông tin Task và danh sách 10 comment đầu tiên. Server render tiêu đề, nội dung task ra HTML tĩnh để hiển thị ngay lập tức. Danh sách comment được chuyển thành JSON và gán vào biến global hoặc data-attribute.
+Client Side: Trình duyệt hiển thị nội dung tĩnh ngay. Sau đó app.js chạy, khởi tạo Vue instance, đọc dữ liệu JSON kia và render khu vực Comment.
+Lợi ích: Người dùng thấy nội dung ngay lập tức (không bị màn hình trắng loading), còn các tính năng phức tạp sẽ được load ngay sau đó.
+3.3.4. Luồng xử lý File đính kèm
+Upload: User chọn file -> Vue.js gửi FormData (Multipart) lên API /api/upload.
+Validation (Server):
+Kiểm tra đuôi file (Allow list: .pdf, .png, .zip...).
+Kiểm tra dung lượng (Max 20MB).
+Storage:
+Tạo tên file mới: Guid.NewGuid() + Extension (VD: a1b2-c3d4.pdf) để tránh trùng tên và đoán đường dẫn.
+Lưu vào thư mục vật lý: wwwroot/uploads/{ProjectId}/{Year}/{Month}/.
+Database: Lưu bản ghi vào bảng Attachments với đường dẫn vừa lưu.
+Response: Trả về URL cho Client để hiển thị link download.
+CHƯƠNG 4: THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG (UI/UX DESIGN)
+Định nghĩa cấu trúc trang web (Sitemap) và các luồng thao tác chính (User Flows) để đảm bảo tính logic và tiện dụng.
+
+4.1. SƠ ĐỒ TRANG (SITEMAP)
+Cấu trúc sitemap giúp định hình việc điều hướng (Navigation) trong ứng dụng. Hệ thống được chia thành 3 khu vực chính: Public (Chưa đăng nhập), Workspace (Khu vực làm việc chính) và Admin (Quản trị hệ thống).
+
+
+Mô tả chi tiết các trang chính:
+Dashboard Tổng quan (Home):
+Hiển thị danh sách các Dự án đang tham gia.
+Widget "My Tasks": Các công việc được assign cho tôi đang chờ xử lý.
+Widget "Recent Activity": Hoạt động mới nhất từ các dự án.
+Chi tiết Dự án (Project Detail):
+Là trang được truy cập nhiều nhất.
+Giao diện chia 2 cột: Cột trái lớn (Task List), Cột phải nhỏ (Info, Members, Wiki links).
+Có bộ lọc (Filter) và thanh tìm kiếm (Search) nằm trên cùng.
+Chi tiết Task (Task View):
+Thiết kế dạng Modal (Popup lớn) hoặc Trang riêng.
+Tập trung vào nội dung mô tả và khu vực Comment.
+4.2. LUỒNG NGƯỜI DÙNG
+Phần này mô tả các kịch bản sử dụng phổ biến nhất để đảm bảo thiết kế giao diện không bỏ sót bước nào.
+
+4.2.1. Flow 1: Tạo Dự án mới & Mời thành viên (Dành cho Manager)
+Mục tiêu: Manager khởi tạo không gian làm việc và setup team.
+
+
+4.2.2. Flow 2: Quy trình xử lý Task (Vòng đời công việc)
+Mục tiêu: Từ lúc tạo task đến lúc hoàn thành.
+
+
+Chi tiết UX:
+Tạo Task: Form tạo task cần đơn giản, hỗ trợ paste ảnh trực tiếp từ clipboard vào phần mô tả (Rich Text Editor).
+Chuyển trạng thái: Nên thiết kế dạng Dropdown - Chọn trạng thái.
+Phản hồi: Khi task bị từ chối (Review -> Doing), bắt buộc người duyệt phải để lại Comment lý do.
+4.2.3. Flow 3: Bảo mật Task riêng tư (Private Task)
+Mục tiêu: Đảm bảo người không phận sự không xem được nội dung.
+
+
+Chi tiết UX:
+Với Masked View, hiển thị biểu tượng "Ổ khóa" 🔒 bên cạnh tiêu đề để người dùng hiểu đây là task bảo mật, tránh việc họ tưởng lỗi hệ thống không load được nội dung.
+
+4.3. WIREFRAME & BỐ CỤC MÀN HÌNH
+Phần này mô tả chi tiết bố cục các màn hình chính. Chúng ta sử dụng layout 3 cột (3-Column Layout) để tận dụng tối đa không gian màn hình Desktop.
+
+4.3.1. Layout Tổng thể (Master Layout)
+Đây là khung sườn dùng chung cho toàn bộ trang web (trừ trang Login).
+Sơ đồ khối:
+
+
+Mô tả chi tiết thành phần:
+4.3.2. Màn hình 1: Chi tiết Dự án (Project Detail View)
+Đây là màn hình làm việc chính.
+Sơ đồ khối:
+
+
+Chi tiết bố cục:
+Project Header (Banner):
+Logo & Tên Dự án: Font lớn.
+Project Code: VD: PRJ-2025.
+Thanh tiến độ (Progress Bar): Hiển thị % hoàn thành ngay dưới tên.
+Nút Action: "Create Task" (Nổi bật), "Invite Member".
+Khu vực Chính (Main List - Vue.js):
+Filter Bar: Dropdown lọc theo Status (To Do, Done...), Assignee, Tags.
+Task Card (Item): Mỗi dòng là 1 Task, hiển thị:
+Dòng 1: Tiêu đề Task (Bold).
+Dòng 2: Tags (Màu sắc) | Deadline (Màu đỏ nếu trễ) | Status Badge.
+Dòng 3: Avatar người làm | Số lượng comment | Nút Upvote.
+Khu vực Phụ (Right Widgets):
+About Community: Mô tả dự án, Ngày tạo.
+Project Manager: List Avatar của các Manager.
+Wiki Quick Links: Link nhanh tới các trang tài liệu quan trọng.
+4.3.3. Màn hình 2: Chi tiết Công việc (Task Detail View)
+Thiết kế hiển thị nội dung chi tiết và thảo luận.
+Sơ đồ khối:
+
+
+Chi tiết bố cục:
+Cột trái (Nội dung chính - Chiếm 70%):
+Vote Box: Nằm dọc bên trái tiêu đề.
+Tiêu đề: Font lớn. Nếu là Private Task -> Hiện thêm icon 🔒.
+Người tạo: "Posted by @user lúc 10:00 AM".
+Nội dung: Render HTML từ Editor.
+File đính kèm: Hiển thị dạng lưới (Grid) các thumbnail file.
+Khu vực Comment (Vue.js):
+Ô nhập liệu (Rich Text Lite).
+Danh sách comment phân cấp (Thụt đầu dòng cho Reply).
+Cột phải (Thuộc tính Task - Chiếm 30%):
+Status Card: Dropdown đổi trạng thái (New -> Doing -> Done). Màu nền thay đổi theo trạng thái.
+Deadline: Hiển thị dạng Lịch. Cảnh báo màu đỏ nếu quá hạn.
+Assignee: Hiển thị Avatar + Tên người làm. Nút "Assign to me".
+Labels: Danh sách Tags hiện có. Nút "(+) Add Tag".
+Audit Log: Link "Xem lịch sử thay đổi" (mở ra Modal danh sách log).
+4.3.4. Màn hình 3: Soạn thảo Wiki (Wiki Editor)
+Giao diện tập trung vào việc viết tài liệu.
+Bố cục chi tiết:
+Sidebar Trái (Wiki Nav): Cây thư mục các trang Wiki (Page Tree).
+Vùng giữa (Editor):
+Sử dụng thư viện Markdown Editor (như EasyMDE hoặc Toast UI).
+Chia đôi màn hình: Một bên gõ mã Markdown, một bên Preview kết quả.
+CHƯƠNG 5: QUY CHUẨN KỸ THUẬT
+Quy định các tiêu chuẩn bắt buộc áp dụng trong quá trình phát triển dự án ProjectHub để đảm bảo tính nhất quán.
+5.1. QUY ƯỚC ĐẶT TÊN (NAMING CONVENTION)
+5.1.1. Backend (.NET / C#)
+Tuân thủ chuẩn chung của Microsoft .NET:
+Quy tắc đặc biệt:
+Interface: Bắt buộc có tiền tố I. Ví dụ: IFileService.
+DTO: Nên có hậu tố Dto hoặc ViewModel. Ví dụ: CreateTaskDto.
+5.1.2. Database (PostgreSQL)
+Sử dụng chuẩn snake_case (chữ thường, ngăn cách bởi gạch dưới) để tối ưu hóa tương thích với Postgres.
+5.1.3. Frontend (Vue.js & CSS)
+5.2. CẤU TRÚC THƯ MỤC
+Dự án tổ chức theo mô hình Modular Monolith, chia tách theo Feature (Tính năng) trong thư mục Areas để dễ quản lý.
+
+ProjectHub.Web/
+├── Areas/
+│   ├── Projects/
+│   │   ├── Controllers/       # API Controllers riêng cho Project
+│   │   ├── Pages/             # Razor Pages (UI)
+│   │   ├── Models/            # ViewModel cục bộ
+│   │   └── Views/             # (Nếu dùng MVC thuần)
+│   ├── Tasks/
+│   │   ├── ...
+│   └── Admin/
+│       ├── ...
+├── Data/                      # Database Context & Migrations
+├── Entities/                  # Domain Models (User, Project, Task)
+├── Services/                  # Business Logic Layer
+│   ├── Interfaces/
+│   └── Implementations/
+├── Hubs/                      # SignalR Hubs
+├── wwwroot/
+│   ├── css/
+│   ├── js/
+│   │   ├── app.js             # Main entry
+│   │   └── components/        # Vue Components (.js hoặc .vue)
+│   └── uploads/               # User Generated Content
+├── appsettings.json           # Configs
+└── Program.cs                 # App Startup
+
+
+5.3. QUY TRÌNH PHÁT TRIỂN
+5.3.1. Quản lý mã nguồn (Git)
+Sử dụng mô hình Git đơn giản hóa:
+Nhánh main: Chứa code Production ổn định. Chỉ được merge vào khi Release.
+Nhánh develop: Nhánh phát triển chính. Code của cả team sẽ merge vào đây để test.
+Nhánh tính năng (feature/...):
+Mỗi task trên ProjectHub sẽ tương ứng với một branch.
+Quy tắc đặt tên: feature/{tên-ngắn-gọn} hoặc feature/{task-id}.
+Ví dụ: feature/create-task-api, feature/ui-dashboard.
+Nhánh sửa lỗi (bugfix/...): Dùng để sửa lỗi phát sinh.
+5.3.2. Quy trình Review & Merge (Pull Request)
+Commit: Message phải rõ ràng.
+Tốt: "Add create task validation logic"
+Xấu: "Fix code", "Update"
+Tạo Pull Request (PR):
+Từ nhánh feature/... vào develop.
+Mô tả rõ: Làm chức năng gì? Test như thế nào?
+Code Review:
+Bắt buộc ít nhất 1 người review trước khi Merge.
+Kiểm tra logic, convention và bảo mật.
+Merge: Sử dụng chế độ "Squash and Merge" (nếu cần gọn history) hoặc "Merge Commit".
+
+5.3.3. Tiêu chuẩn hoàn thành
+Một chức năng chỉ được coi là "Xong" khi:
+Code đã được push lên Git.
+Đã Build Success.
+Đã tự test (Unit Test hoặc Manual Test) các trường hợp cơ bản.
+Không vi phạm các quy tắc đặt tên ở mục 5.1.
+CHƯƠNG 6: TRIỂN KHAI & VẬN HÀNH
+Cung cấp hướng dẫn chi tiết về việc thiết lập môi trường phát triển (Local Environment), quy trình đưa sản phẩm lên môi trường sản xuất (Production), và các phương án bảo vệ dữ liệu.
+
+6.1. THIẾT LẬP MÔI TRƯỜNG PHÁT TRIỂN
+Dành cho Developer mới tham gia dự án.
+6.1.1. Yêu cầu phần mềm (Prerequisites)
+Trước khi bắt đầu, máy trạm cần được cài đặt:
+IDE: Visual Studio hoặc Jetbrain Rider hoặc VS Code.
+SDK: .NET SDK.
+Database: PostgreSQL 16+.
+Tools:
+pgAdmin 4 (hoặc tương đương): Để quản lý giao diện Database.
+Git SCM: Để quản lý mã nguồn.
+Node.js (Optional): Chỉ cần nếu muốn build lại CSS từ SASS hoặc quản lý thư viện JS (tuy nhiên dự án này ưu tiên dùng CDN/LibMan cho đơn giản).
+6.1.2. Các bước cài đặt 
+Bước 1: Lấy mã nguồn
+git clone project-url
+
+Bước 2: Cấu hình kết nối
+Copy file appsettings.json thành appsettings.Development.json.
+Cập nhật chuỗi kết nối (Connection String) phù hợp với máy cá nhân:
+"ConnectionStrings": {
+  "DefaultConnection": "Host=localhost; Port=5432; Database=DBNAME; Username=postgres; Password=yourPassword"
+}
+
+Bước 3: Khởi tạo Cơ sở dữ liệu
+Dự án sử dụng Entity Framework Core Code-First. Chạy lệnh sau tại thư mục gốc của Project để sinh Database và các bảng:
+
+# Cài đặt công cụ EF (nếu chưa có)
+dotnet tool install --global dotnet-ef
+
+# Chạy Migration
+dotnet ef database update
+
+Bước 4: Chạy ứng dụng
+
+6.2. KẾ HOẠCH SAO LƯU & PHỤC HỒI (BACKUP & RECOVERY)
+Dữ liệu là tài sản quan trọng nhất. Vì hệ thống lưu trữ File vật lý và Database riêng biệt, cần backup cả hai thành phần này.
+
+6.2.1. Sao lưu Cơ sở dữ liệu (PostgreSQL)
+Sử dụng công cụ pg_dump để xuất dữ liệu ra file SQL.
+
+6.2.2. Sao lưu File đính kèm (File Storage)
+Toàn bộ file upload nằm trong thư mục wwwroot/uploads.
+Phương pháp: Sử dụng Robocopy (Windows) hoặc Rsync (Linux) để đồng bộ sang ổ cứng khác hoặc Cloud Storage (AWS S3 / Google Drive).
+Script mẫu:
+robocopy "C:\Inetpub\wwwroot\ProjectHub\wwwroot\uploads" "D:\Backups\Files" /MIR /R:3 /W:10
+
+6.2.3. Quy trình Phục hồi (Recovery)
+Khi có sự cố sập server hoặc mất dữ liệu:
+Dừng Website (IIS/Kestrel).
+Restore Database:
+psql -U postgres -d ProjectHub_Prod -f backup_file.sql
+Restore Files: Copy ngược thư mục backup vào wwwroot/uploads.
+Khởi động lại Website.
+6.3. DANH SÁCH KIỂM TRA
+Trước khi Deploy một tính năng mới hoặc Release phiên bản mới, Developer và Tester cần đi qua checklist này để đảm bảo chất lượng (QA).
+6.3.1. Smoke Test
+Mục đích: Đảm bảo các chức năng chính vẫn hoạt động.
+6.3.2. Performance Check
+[ ] Trang Dashboard hay trang X tải dưới 2 giây không?
+[ ] Việc tìm kiếm Task trả về kết quả dưới 1 giây?
+[ ] Upload file 20MB có thành công không?
+6.3.3. Security Check (Bảo mật)
+[ ] Thử truy cập trực tiếp URL của Private Task bằng tài khoản không có quyền -> Phải bị chặn hoặc ẩn nội dung.
+[ ] Thử upload file .exe -> Phải bị hệ thống từ chối.

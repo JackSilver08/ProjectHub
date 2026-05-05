@@ -1,4 +1,5 @@
-﻿// PROJECT DETAILS - ALL FUNCTIONALITIES
+let addQuill, editQuill, wikiQuill;
+// PROJECT DETAILS - ALL FUNCTIONALITIES
 // =====================================
 
 // GLOBAL VARIABLES
@@ -127,7 +128,11 @@ function initializeTaskManagement() {
     if (createTaskBtn) {
         createTaskBtn.addEventListener("click", async function () {
             const title = document.getElementById("taskTitle") ? document.getElementById("taskTitle").value.trim() : '';
+            const description = addQuill ? addQuill.root.innerHTML : '';
             const projectId = document.getElementById("taskProjectId") ? document.getElementById("taskProjectId").value : null;
+
+                        const tagSelect = document.getElementById("taskTags");
+            const tagIds = tagSelect ? Array.from(tagSelect.selectedOptions).map(opt => opt.value) : [];
 
             if (!title) {
                 alert("Title is required");
@@ -150,6 +155,8 @@ function initializeTaskManagement() {
                     body: JSON.stringify({
                         projectId: projectId,
                         title: title,
+                        description: description,
+                        tagIds: tagIds,
                         assigneeId: document.getElementById("taskAssignee") ? document.getElementById("taskAssignee").value || null : null,
                         deadline: document.getElementById("taskDeadline") ? document.getElementById("taskDeadline").value || null : null
                     })
@@ -188,9 +195,29 @@ function initializeTaskManagement() {
 function openEditTask(id, title, assigneeId, deadline, status) {
     document.getElementById("editTaskId").value = id;
     document.getElementById("editTaskTitle").value = title;
+    if (editQuill) {
+        // We need to fetch task detail to get description, or description is not passed yet.
+        // Wait, editTask currently does not pass description in openEditTask.
+    }
     document.getElementById("editTaskAssignee").value = assigneeId || "";
     document.getElementById("editTaskDeadline").value = deadline || "";
     document.getElementById("editTaskStatus").value = status;
+    if (editQuill) {
+        editQuill.root.innerHTML = "Loading...";
+        fetch("?handler=TaskDetail&taskId=" + id)
+            .then(res => res.json())
+            .then(data => {
+                                editQuill.root.innerHTML = data.description || "";
+                const editTagSelect = document.getElementById("editTaskTags");
+                if (editTagSelect && data.tags) {
+                    const tagIds = data.tags.map(t => t.id);
+                    Array.from(editTagSelect.options).forEach(opt => {
+                        opt.selected = tagIds.includes(opt.value);
+                    });
+                }
+            })
+            .catch(err => console.error(err));
+    }
 
     const modalElement = document.getElementById("editTaskModal");
     if (modalElement) {
@@ -293,7 +320,7 @@ function initializeWikiManagement() {
 function openCreateWiki() {
     document.getElementById("wikiId").value = "";
     document.getElementById("wikiTitle").value = "";
-    document.getElementById("wikiContent").value = "";
+    if(wikiQuill) wikiQuill.root.innerHTML = ""; else document.getElementById("wikiContent").value = "";
     document.getElementById("wikiModalTitle").innerText = "Create Wiki";
 
     const modalElement = document.getElementById("wikiModal");
@@ -309,7 +336,7 @@ function openWikiDetail(id) {
         .then(function (w) {
             document.getElementById("wikiId").value = w.id;
             document.getElementById("wikiTitle").value = w.title;
-            document.getElementById("wikiContent").value = w.content;
+            if(wikiQuill) wikiQuill.root.innerHTML = w.content || ""; else document.getElementById("wikiContent").value = w.content;
             document.getElementById("wikiModalTitle").innerText = "Wiki Detail";
 
             const modalElement = document.getElementById("wikiModal");
@@ -328,7 +355,7 @@ function saveWiki() {
     const id = document.getElementById("wikiId") ? document.getElementById("wikiId").value : '';
     const projectId = document.getElementById("projectId") ? document.getElementById("projectId").value : null;
     const title = document.getElementById("wikiTitle") ? document.getElementById("wikiTitle").value : '';
-    const content = document.getElementById("wikiContent") ? document.getElementById("wikiContent").value : '';
+    const content = wikiQuill ? wikiQuill.root.innerHTML : (document.getElementById("wikiContent") ? document.getElementById("wikiContent").value : '');
 
     if (!projectId) {
         alert("Project ID not found");
@@ -346,6 +373,8 @@ function saveWiki() {
             id: id,
             projectId: projectId,
             title: title,
+                        description: description,
+                        tagIds: tagIds,
             content: content
         })
     })
@@ -597,8 +626,11 @@ function renderComments(comments) {
             '</div>' +
             '<div class="comment-body">' + (commentText || '<span class="text-muted fst-italic">Attachment only</span>') + '</div>' +
             attachmentsHtml +
-            '<button class="btn btn-sm btn-link p-0 comment-reply-btn" onclick="setReplyTo(\'' +
-            comment.taskId + '\', \'' + comment.id + '\', \'' + safeUserForJs + '\')">Reply</button>';
+            '<div class="d-flex align-items-center mt-1">' +
+            '<button class="btn btn-sm btn-link p-0 comment-reply-btn me-3" onclick="setReplyTo(\'' + comment.taskId + '\', \'' + comment.id + '\', \'' + safeUserForJs + '\')">Reply</button>' +
+            '<span class="cursor-pointer me-3 ' + (comment.currentUserVote === true ? 'text-primary' : 'text-muted') + '" onclick="voteComment(' + comment.id + ', true, \'' + comment.taskId + '\')"><i class="bi bi-hand-thumbs-up' + (comment.currentUserVote === true ? '-fill' : '') + '"></i> ' + comment.upvotes + '</span>' +
+            '<span class="cursor-pointer ' + (comment.currentUserVote === false ? 'text-danger' : 'text-muted') + '" onclick="voteComment(' + comment.id + ', false, \'' + comment.taskId + '\')"><i class="bi bi-hand-thumbs-down' + (comment.currentUserVote === false ? '-fill' : '') + '"></i> ' + comment.downvotes + '</span>' +
+            '</div>';
 
 
         if (comment.replies && comment.replies.length > 0) {
@@ -617,6 +649,10 @@ function renderComments(comments) {
                     '<small class="comment-time">' + replyCreatedAt + '</small>' +
                     '</div>' +
                     '<div class="comment-body">' + (replyContent || '<span class="text-muted fst-italic">Attachment only</span>') + '</div>' +
+                    '<div class="d-flex align-items-center mt-1">' +
+                    '<span class="cursor-pointer me-3 ' + (reply.currentUserVote === true ? 'text-primary' : 'text-muted') + '" onclick="voteComment(' + reply.id + ', true, \'' + reply.taskId + '\')"><i class="bi bi-hand-thumbs-up' + (reply.currentUserVote === true ? '-fill' : '') + '"></i> ' + reply.upvotes + '</span>' +
+                    '<span class="cursor-pointer ' + (reply.currentUserVote === false ? 'text-danger' : 'text-muted') + '" onclick="voteComment(' + reply.id + ', false, \'' + reply.taskId + '\')"><i class="bi bi-hand-thumbs-down' + (reply.currentUserVote === false ? '-fill' : '') + '"></i> ' + reply.downvotes + '</span>' +
+                    '</div>' +
                     '</div>';
             });
             html += '</div>';
@@ -705,6 +741,63 @@ async function postComment(taskId) {
         formData.append("ParentId", parentId);
     }
 
+
+    if (cancelBtn) {
+        cancelBtn.classList.remove('d-none');
+        cancelBtn.dataset.taskId = taskId;
+        cancelBtn.dataset.parentId = parentId;
+    }
+
+    if (commentInput) {
+        commentInput.dataset.parentId = parentId;
+        commentInput.focus();
+    }
+}
+
+function cancelReply(taskId) {
+    const replyInfo = document.querySelector('.comments[data-task-id="' + taskId + '"] .reply-info');
+    const cancelBtn = document.querySelector('.comments[data-task-id="' + taskId + '"] .cancel-reply');
+    const commentInput = document.querySelector('.comments[data-task-id="' + taskId + '"] .comment-input');
+
+    if (replyInfo) {
+        replyInfo.innerHTML = '';
+        replyInfo.classList.add('d-none');
+    }
+
+    if (cancelBtn) {
+        cancelBtn.classList.add('d-none');
+        delete cancelBtn.dataset.parentId;
+    }
+
+    if (commentInput) {
+        delete commentInput.dataset.parentId;
+        commentInput.value = '';
+    }
+}
+
+async function postComment(taskId) {
+    const container = document.querySelector(
+        '.comments[data-task-id="' + taskId + '"]'
+    );
+
+    if (!container) return;
+
+    const commentInput = container.querySelector('.comment-input');
+    const fileInput = container.querySelector('.comment-attachments');
+
+    const content = commentInput.value.trim();
+    const parentId = commentInput.dataset.parentId || null;
+
+    if (!content && fileInput.files.length === 0) return;
+
+    const formData = new FormData();
+    formData.append("TaskId", taskId);
+    formData.append("Content", content);
+
+    if (parentId) {
+        formData.append("ParentId", parentId);
+    }
+
     // 🔥 FILES
     for (const file of fileInput.files) {
         formData.append("Attachments", file);
@@ -734,12 +827,43 @@ async function postComment(taskId) {
     }
 }
 
+async function voteComment(commentId, isUpvote, taskId) {
+    try {
+        const res = await fetch("?handler=VoteComment", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ commentId: commentId, isUpvote: isUpvote, taskId: taskId })
+        });
+
+        if (res.ok) {
+            const result = await res.json();
+            if (result.success) {
+                await loadComments(taskId); // reload to show updated votes
+            }
+        }
+    } catch (error) {
+        console.error("Error voting:", error);
+    }
+}
+
 // =========================
 // MAIN INITIALIZATION
 // =========================
 document.addEventListener("DOMContentLoaded", function () {
     initializeMemberManagement();
     initializeTaskManagement();
+    if (document.getElementById('addTaskDescription')) {
+        addQuill = new Quill('#addTaskDescription', { theme: 'snow', placeholder: 'Task description...' });
+    }
+    if (document.getElementById('editTaskDescription')) {
+        editQuill = new Quill('#editTaskDescription', { theme: 'snow' });
+    }
+    if (document.getElementById('wikiContent')) {
+        wikiQuill = new Quill('#wikiContent', { theme: 'snow' });
+    }
     initializeWikiManagement();
     initializeTabManagement();
     initializeTaskComments();
@@ -749,6 +873,38 @@ document.addEventListener("DOMContentLoaded", function () {
     console.log("Project details initialized");
 });
 
+async function createTag() {
+    const projectId = document.getElementById("projectId") ? document.getElementById("projectId").value : null;
+    const name = document.getElementById("newTagName").value.trim();
+    const colorCode = document.getElementById("newTagColor").value;
+
+    if (!projectId || !name) return;
+
+    try {
+        const res = await fetch("?handler=CreateTag", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
+            },
+            body: JSON.stringify({ projectId, name, colorCode })
+        });
+        if (res.ok) location.reload();
+    } catch (e) { console.error(e); }
+}
+
+async function deleteTag(id) {
+    if (!confirm("Delete this tag?")) return;
+    try {
+        const res = await fetch("?handler=DeleteTag&id=" + id, {
+            method: "POST",
+            headers: {
+                "RequestVerificationToken": document.querySelector('input[name="__RequestVerificationToken"]').value
+            }
+        });
+        if (res.ok) location.reload();
+    } catch (e) { console.error(e); }
+}
 
 function renderAttachments(attachments) {
     if (!attachments || attachments.length === 0) return '';
@@ -859,3 +1015,24 @@ function safeReload() {
 document.addEventListener("submit", function () {
     sessionStorage.setItem(tabStorageKey(), getActiveTabName());
 });
+
+
+
+
+
+window.updateTaskStatusUI = (taskId, newStatus) => {
+    const btn = document.querySelector(`.task-card[data-task-id="${taskId}"] .task-status-btn`);
+    if(btn) {
+        let statusText = "Todo";
+        let statusClass = "btn-secondary";
+        switch(parseInt(newStatus)) {
+            case 0: statusText = "Todo"; statusClass = "btn-secondary"; break;
+            case 1: statusText = "In Progress"; statusClass = "btn-warning text-dark"; break;
+            case 2: statusText = "Review"; statusClass = "btn-danger"; break;
+            case 3: statusText = "Completed"; statusClass = "btn-success"; break;
+        }
+        btn.className = "btn btn-sm fw-semibold dropdown-toggle task-status-btn " + statusClass;
+        btn.innerText = statusText;
+    }
+};
+

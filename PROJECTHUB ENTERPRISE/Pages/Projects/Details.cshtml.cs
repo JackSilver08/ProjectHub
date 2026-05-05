@@ -1,59 +1,58 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using PROJECTHUB_ENTERPRISE.Data;
 using PROJECTHUB_ENTERPRISE.Dtos;
 using PROJECTHUB_ENTERPRISE.Hubs;
 using PROJECTHUB_ENTERPRISE.Models;
-using PROJECTHUB_ENTERPRISE.ViewModels;
-using System.ComponentModel.Design;
+using PROJECTHUB_ENTERPRISE.Services.Interfaces;
 using System.Security.Claims;
-using System.Text.Json;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using TaskStatusEnum = PROJECTHUB_ENTERPRISE.Models.TaskStatus;
-
 
 namespace PROJECTHUB_ENTERPRISE.Pages.Projects
 {
     public class DetailsModel : PageModel
     {
+        private readonly IProjectService _projectService;
+        private readonly ITaskService _taskService;
+        private readonly ICommentService _commentService;
+        private readonly IWikiService _wikiService;
+        private readonly INotificationService _notificationService;
         private readonly IHubContext<ProjectHub> _hub;
 
-        private readonly AppDbContext _db;
-
-      
-        public ProjectBoardVM Board { get; set; } = new();
+        public DetailsModel(
+            IProjectService projectService,
+            ITaskService taskService,
+            ICommentService commentService,
+            IWikiService wikiService,
+            INotificationService notificationService,
+            IHubContext<ProjectHub> hub)
+        {
+            _projectService = projectService;
+            _taskService = taskService;
+            _commentService = commentService;
+            _wikiService = wikiService;
+            _notificationService = notificationService;
+            _hub = hub;
+        }
 
         public ProjectDetailsVM Project { get; set; } = new();
-        public TaskStatusEnum Status { get; set; }
+        public ProjectBoardVM Board { get; set; } = new();
+        public List<PROJECTHUB_ENTERPRISE.Models.TagEntity> Tags { get; set; } = new();
+
+        // ── GET: Load project details page ─────────────
 
         public async Task<IActionResult> OnGetAsync(Guid id)
         {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var owner = await (
-    from pm in _db.ProjectMembers
-    join u in _db.Users on pm.UserId equals u.Id
-    where pm.ProjectId == id && pm.Role == "Manager"
-    select new ProjectOwnerVM
-    {
-        UserId = u.Id,
-        FullName = u.FullName,
-        Email = u.Email
-    }
-).FirstAsync();
-            var role = await _db.ProjectMembers
-                .Where(pm => pm.ProjectId == id && pm.UserId == userId)
-                .Select(pm => pm.Role)
-                .FirstOrDefaultAsync();
+            var userId = GetUserId();
+            var role = await _projectService.GetUserRoleAsync(id, userId);
+            if (role == null) return Forbid();
 
-            if (role == null)
-                return Forbid();
+            var project = await _projectService.GetByIdAsync(id);
+            if (project == null) return NotFound();
 
-            var project = await _db.Projects.FirstAsync(p => p.Id == id);
-
-            var tasks = _db.Tasks.Where(t => t.ProjectId == id);
+            var members = await _projectService.GetMembersAsync(id);
+            var progress = await _projectService.CalculateProgressAsync(id);
+            var owner = members.FirstOrDefault(m => m.Role == "Manager");
 
             Project = new ProjectDetailsVM
             {
@@ -62,737 +61,423 @@ namespace PROJECTHUB_ENTERPRISE.Pages.Projects
                 Description = project.Description,
                 IsArchived = project.IsArchived,
                 CurrentUserRole = role,
-                Owner = owner,
-
-                TotalTasks = await tasks.CountAsync(),
-                OpenTasks = await tasks.CountAsync(t => t.Status != Models.TaskStatus.Completed),
-                CompletedTasks = await tasks.CountAsync(t => t.Status == Models.TaskStatus.Completed),
-
-                Members = await (
-                    from pm in _db.ProjectMembers
-                    join u in _db.Users on pm.UserId equals u.Id
-                    where pm.ProjectId == id
-                    select new ProjectMemberVM
-                    {
-                        UserId = u.Id,
-                        FullName = u.FullName,
-                        Email = u.Email,
-                        Role = pm.Role
-                    }
-                ).ToListAsync()
+                Owner = owner != null ? new ProjectOwnerVM
+                {
+                    UserId = owner.UserId,
+                    FullName = owner.FullName,
+                    Email = owner.Email
+                } : new ProjectOwnerVM(),
+                TotalTasks = progress.TotalTasks,
+                OpenTasks = progress.OpenTasks,
+                CompletedTasks = progress.CompletedTasks,
+                ProgressPercent = progress.ProgressPercent,
+                CanEditWiki = role == "Manager",
+                CanEditSettings = role == "Manager",
+                Members = members.Select(m => new ProjectMemberVM
+                {
+                    UserId = m.UserId,
+                    FullName = m.FullName,
+                    Email = m.Email,
+                    Role = m.Role
+                }).ToList()
             };
-            var boardTasks = await (
-    from t in _db.Tasks
-    join u in _db.Users on t.AssigneeId equals u.Id into au
-    from assignee in au.DefaultIfEmpty()
-    where t.ProjectId == id
-    select new TaskBoardItemVM
-    {
-        Id = t.Id,
-        Title = t.Title,
-        Status = t.Status,
-        Priority = t.Priority,
-        Deadline = t.Deadline,
-        AssigneeName = assignee != null ? assignee.FullName : null
-    }
-).ToListAsync();
-            Board.Todo = boardTasks
-     .Where(t => t.Status == TaskStatusEnum.Todo)
-     .ToList();
 
-            Board.InProgress = boardTasks
-                .Where(t => t.Status == TaskStatusEnum.InProgress)
-                .ToList();
+            // Build Kanban board
+            var tasks = await _taskService.GetTasksByProjectAsync(id);
+            Board.Todo = tasks.Where(t => t.Status == TaskStatusEnum.Todo).Select(MapToBoard).ToList();
+            Board.InProgress = tasks.Where(t => t.Status == TaskStatusEnum.InProgress).Select(MapToBoard).ToList();
+            Board.Review = tasks.Where(t => t.Status == TaskStatusEnum.Review).Select(MapToBoard).ToList();
+            Board.Done = tasks.Where(t => t.Status == TaskStatusEnum.Completed).Select(MapToBoard).ToList();
 
-            Board.Review = boardTasks
-                .Where(t => t.Status == TaskStatusEnum.Review)
-                .ToList();
+            // Load wiki
+            var wikis = await _wikiService.GetByProjectAsync(id);
+            Project.Wikis = wikis.Select(w => new WikiPage
+            {
+                Id = w.Id, ProjectId = w.ProjectId, Title = w.Title,
+                Slug = w.Slug, Content = w.Content, UpdatedAt = w.UpdatedAt
+            }).ToList();
 
-            Board.Done = boardTasks
-                .Where(t => t.Status == TaskStatusEnum.Completed)
-                .ToList();
-
-            Project.Wikis = await _db.WikiPages
-.Where(w => w.ProjectId == id)
-.OrderBy(w => w.Title)
-.ToListAsync();
             return Page();
-
-       
         }
+
+        // ── GET: Timeline data ─────────────────────────
+
         public async Task<IActionResult> OnGetTimelineAsync(Guid id, string range = "30d")
         {
-            int days = range switch
-            {
-                "14d" => 14,
-                "90d" => 90,
-                _ => 30
-            };
-
-            var from = DateTime.UtcNow.Date.AddDays(-(days - 1));
-
-            var tasks = await _db.Tasks
-                .Where(t => t.ProjectId == id &&
-                            (
-                                t.CreatedAt >= from
-                                || (t.Status == PROJECTHUB_ENTERPRISE.Models.TaskStatus.Completed
-                                    && t.UpdatedAt.HasValue
-                                    && t.UpdatedAt.Value >= from)
-                            ))
-                .Select(t => new { t.CreatedAt, t.UpdatedAt, t.Status })
-                .ToListAsync();
-
-            var labels = Enumerable.Range(0, days)
-                .Select(i => from.AddDays(i).ToString("yyyy-MM-dd"))
-                .ToList();
-
-            var created = labels.ToDictionary(x => x, _ => 0);
-            var completed = labels.ToDictionary(x => x, _ => 0);
-
-            foreach (var t in tasks)
-            {
-                // CreatedAt là DateTime thường
-                var cKey = t.CreatedAt.ToUniversalTime().Date.ToString("yyyy-MM-dd");
-                if (created.ContainsKey(cKey)) created[cKey]++;
-
-                // UpdatedAt là nullable -> check HasValue
-                if (t.Status == PROJECTHUB_ENTERPRISE.Models.TaskStatus.Completed && t.UpdatedAt.HasValue)
-                {
-                    var dKey = t.UpdatedAt.Value.ToUniversalTime().Date.ToString("yyyy-MM-dd");
-                    if (completed.ContainsKey(dKey)) completed[dKey]++;
-                }
-            }
-
+            var data = await _taskService.GetTimelineAsync(id, range);
             return new JsonResult(new
             {
-                labels,
-                created = labels.Select(l => created[l]).ToArray(),
-                completed = labels.Select(l => completed[l]).ToArray()
+                labels = data.Labels,
+                created = data.Created,
+                completed = data.Completed
             });
         }
-        // 🔥 ADD MEMBER
+
+        // ── GET: Summary stats (for SignalR refresh) ───
+
+        public async Task<IActionResult> OnGetSummaryStatsAsync(Guid id)
+        {
+            var progress = await _projectService.CalculateProgressAsync(id);
+            return new JsonResult(new
+            {
+                summary = new
+                {
+                    totalTasks = progress.TotalTasks,
+                    openTasks = progress.OpenTasks,
+                    completedTasks = progress.CompletedTasks,
+                    progressPercent = progress.ProgressPercent
+                },
+                chart = new
+                {
+                    todo = progress.Todo,
+                    inProgress = progress.InProgress,
+                    review = progress.Review,
+                    completed = progress.CompletedTasks,
+                    onHold = progress.OnHold
+                }
+            });
+        }
+
+        // ── GET: Project members list (JSON) ───────────
+
+        public async Task<IActionResult> OnGetProjectMembersAsync(Guid projectId)
+        {
+            var members = await _projectService.GetMembersAsync(projectId);
+            return new JsonResult(members.Select(m => new
+            {
+                m.UserId, m.FullName, m.AvatarUrl
+            }));
+        }
+
+        // ── POST: Add member ───────────────────────────
+
         public async Task<IActionResult> OnPostAddMemberAsync([FromBody] AddMemberRequest req)
         {
-            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            // Check quyền
-            var role = await _db.ProjectMembers
-                .Where(pm => pm.ProjectId == req.ProjectId && pm.UserId == userId)
-                .Select(pm => pm.Role)
-                .FirstOrDefaultAsync();
-
-            if (role != "Manager")
-                return Forbid();
-
-            var exists = await _db.ProjectMembers.AnyAsync(pm =>
-                pm.ProjectId == req.ProjectId &&
-                pm.UserId == req.UserId);
-
-            if (exists)
-                return BadRequest("User already in project");
-
-            _db.ProjectMembers.Add(new ProjectMemberEntity
-            {
-                ProjectId = req.ProjectId,
-                UserId = req.UserId,
-                Role = "Member"
-            });
-
-            await _db.SaveChangesAsync();
-
+            var userId = GetUserId();
+            var result = await _projectService.AddMemberAsync(req.ProjectId, req.UserId, userId);
+            if (!result) return BadRequest("Cannot add member");
             return new JsonResult(new { success = true });
         }
 
-        // Remove Member
+        // ── POST: Remove member ────────────────────────
+
         public async Task<IActionResult> OnPostRemoveMemberAsync(Guid projectId, Guid userId)
         {
-            var currentUserId = Guid.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            // 🔐 Check quyền Manager
-            var role = await _db.ProjectMembers
-                .Where(pm => pm.ProjectId == projectId && pm.UserId == currentUserId)
-                .Select(pm => pm.Role)
-                .FirstOrDefaultAsync();
-
-            if (role != "Manager")
-                return Forbid();
-
-            // ❗ Chỉ lấy đúng 1 member cần xóa
-            var member = await _db.ProjectMembers
-                .FirstOrDefaultAsync(pm =>
-                    pm.ProjectId == projectId &&
-                    pm.UserId == userId);
-
-            if (member == null)
-                return NotFound();
-
-            _db.ProjectMembers.Remove(member);
-            await _db.SaveChangesAsync();
-
+            var currentUserId = GetUserId();
+            var result = await _projectService.RemoveMemberAsync(projectId, userId, currentUserId);
+            if (!result) return Forbid();
             return RedirectToPage(new { id = projectId });
         }
-        private async Task<bool> IsAdminAsync(Guid projectId)
-        {
-            var userId = Guid.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
 
-            return await _db.ProjectMembers.AnyAsync(pm =>
-                pm.ProjectId == projectId &&
-                pm.UserId == userId &&
-                pm.Role == "Manager"   // hoặc "Admin"
-            );
+        // ── POST: Create task ──────────────────────────
+
+        public async Task<IActionResult> OnGetTaskDetailAsync(Guid taskId)
+        {
+            var userId = GetUserId();
+            var detail = await _taskService.GetTaskDetailAsync(taskId, userId);
+            if (detail == null) return NotFound();
+            return new JsonResult(detail);
         }
+
         public async Task<IActionResult> OnPostCreateTaskAsync([FromBody] CreateTaskDto dto)
         {
-            var userId = Guid.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            var task = new TaskEntity
+            var userId = GetUserId();
+            var task = await _taskService.CreateAsync(new CreateTaskRequest
             {
-                Id = Guid.NewGuid(),
                 ProjectId = dto.ProjectId,
                 Title = dto.Title,
-                CreatorId = userId,
+                Description = dto.Description,
                 AssigneeId = dto.AssigneeId,
-                Deadline = dto.Deadline.HasValue
-    ? DateTime.SpecifyKind(dto.Deadline.Value, DateTimeKind.Utc)
-    : null,
+                Deadline = dto.Deadline,
+                ContributesToProgress = true
+            }, userId);
 
-                Status = Models.TaskStatus.Todo,
-                Priority = 0,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _db.Tasks.Add(task);
-            await _db.SaveChangesAsync();
             await BroadcastProjectSummary(dto.ProjectId);
             return new JsonResult(new { success = true });
-
         }
-        public DetailsModel(
-         AppDbContext db,
-         IHubContext<ProjectHub> hub)
+
+        // ── POST: Edit task ────────────────────────────
+
+        public async Task<IActionResult> OnPostEditTaskAsync([FromBody] EditTaskDto dto)
         {
-            _db = db;
-            _hub = hub;
-        }
-        private async Task BroadcastProjectSummary(Guid projectId)
-        {
-            var tasks = _db.Tasks.Where(t => t.ProjectId == projectId);
+            var userId = GetUserId();
+            var result = await _taskService.UpdateAsync(new UpdateTaskRequest
+            {
+                TaskId = dto.TaskId,
+                Title = dto.Title,
+                Description = dto.Description,
+                AssigneeId = dto.AssigneeId,
+                Status = dto.Status,
+                Deadline = dto.Deadline
+            }, userId);
 
-            var todo = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Todo);
-            var inProgress = await tasks.CountAsync(t => t.Status == TaskStatusEnum.InProgress);
-            var review = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Review);
-            var completed = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Completed);
-
-            await _hub.Clients
-                .Group(projectId.ToString())
-                .SendAsync("ProjectStatsUpdated", new
-                {
-                    summary = new
-                    {
-                        totalTasks = todo + inProgress + review + completed,
-                        openTasks = todo + inProgress + review,
-                        completedTasks = completed
-                    },
-                    chart = new
-                    {
-                        todo,
-                        inProgress,
-                        review,
-                        completed
-                    }
-                });
+            if (!result) return Forbid();
+            var task = await _taskService.GetByIdAsync(dto.TaskId);
+            if (task != null) await BroadcastProjectSummary(task.ProjectId);
+            return new JsonResult(new { success = true });
         }
+
+        // ── POST: Delete task ──────────────────────────
+
         public async Task<IActionResult> OnPostDeleteTaskAsync(Guid id)
         {
-            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == id);
-            if (task == null)
-                return NotFound();
+            var task = await _taskService.GetByIdAsync(id);
+            if (task == null) return NotFound();
 
-            if (!await IsAdminAsync(task.ProjectId))
-                return Forbid();
+            var userId = GetUserId();
+            var result = await _taskService.DeleteAsync(id, userId);
+            if (!result) return Forbid();
 
-            _db.Tasks.Remove(task);
-            await _db.SaveChangesAsync();
             await BroadcastProjectSummary(task.ProjectId);
             return new JsonResult(new { success = true });
-
         }
 
-        public async Task<IActionResult> OnPostEditTaskAsync(
-     [FromBody] EditTaskDto dto)
-        {
-            var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == dto.TaskId);
+        // ── POST: Change task status ───────────────────
 
-            if (task == null)
-                return NotFound();
-
-            if (!await IsAdminAsync(task.ProjectId))
-                return Forbid();
-
-            task.Title = dto.Title;
-            task.AssigneeId = dto.AssigneeId;
-            task.Status = dto.Status;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            task.Deadline = dto.Deadline.HasValue
-                ? DateTime.SpecifyKind(dto.Deadline.Value, DateTimeKind.Utc)
-                : null;
-
-            await _db.SaveChangesAsync();
-            await BroadcastProjectSummary(task.ProjectId);
-            return new JsonResult(new { success = true });
-
-        }
-        private TaskStatusEnum GetNextStatus(TaskStatusEnum current)
-        {
-            return current switch
-            {
-                TaskStatusEnum.Todo => TaskStatusEnum.InProgress,
-                TaskStatusEnum.InProgress => TaskStatusEnum.Review,
-                TaskStatusEnum.Review => TaskStatusEnum.Completed,
-                TaskStatusEnum.Completed => TaskStatusEnum.Todo,
-                _ => TaskStatusEnum.Todo
-            };
-        }
         public async Task<IActionResult> OnPostChangeTaskStatusAsync(
-     [FromBody] ChangeTaskStatusDto dto)
+            [FromBody] ChangeTaskStatusDto dto)
         {
-            var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == dto.TaskId);
+            var userId = GetUserId();
+            var changeResult = await _taskService.ChangeStatusAsync(
+                dto.TaskId, (TaskStatusEnum)dto.Status, userId);
 
-            if (task == null)
-                return NotFound();
+            if (!changeResult.Success)
+                return BadRequest(changeResult.Error);
 
-            if (!await IsAdminAsync(task.ProjectId))
-                return Forbid();
+            var task = await _taskService.GetByIdAsync(dto.TaskId);
+            if (task != null) await BroadcastProjectSummary(task.ProjectId);
 
-            // ✅ VALIDATE ENUM
-            if (!Enum.IsDefined(typeof(TaskStatusEnum), dto.Status))
-                return BadRequest("Invalid status");
-
-            task.Status = (TaskStatusEnum)dto.Status;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-
-            await BroadcastProjectSummary(task.ProjectId);
-
-            return new JsonResult(new
-            {
-                success = true,
-                status = task.Status.ToString()
-            });
+            return new JsonResult(new { success = true, status = changeResult.NewStatus.ToString() });
         }
+
+        // ── POST: Cycle task status ────────────────────
 
         public async Task<IActionResult> OnPostCycleTaskStatusAsync(Guid taskId)
         {
-            var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == taskId);
+            var userId = GetUserId();
+            var result = await _taskService.CycleStatusAsync(taskId, userId);
+            if (!result.Success) return Forbid();
 
-            if (task == null)
-                return NotFound();
-
-            if (!await IsAdminAsync(task.ProjectId))
-                return Forbid(); // 🔥 CHẶN USER THƯỜNG
-
-            task.Status = GetNextStatus(task.Status);
-            task.UpdatedAt = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
-
-            return new JsonResult(new
-            {
-                success = true,
-                status = task.Status.ToString()
-            });
+            return new JsonResult(new { success = true, status = result.NewStatus.ToString() });
         }
+
+        // ── Wiki endpoints ─────────────────────────────
+
         public async Task<IActionResult> OnGetWiki(Guid projectId)
         {
-            var userId = Guid.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            var role = await _db.ProjectMembers
-                .Where(p => p.ProjectId == projectId && p.UserId == userId)
-                .Select(p => p.Role)
-                .FirstOrDefaultAsync();
-
+            var userId = GetUserId();
+            var role = await _projectService.GetUserRoleAsync(projectId, userId);
             ViewData["CanEdit"] = role == "Manager";
 
-            var wikis = await _db.WikiPages
-                .Where(w => w.ProjectId == projectId)
-                .OrderBy(w => w.Title)
-                .ToListAsync();
-
-            return Partial("_WikiPartial", wikis);
+            var wikis = await _wikiService.GetByProjectAsync(projectId);
+            var wikiPages = wikis.Select(w => new WikiPage
+            {
+                Id = w.Id, ProjectId = w.ProjectId, Title = w.Title,
+                Slug = w.Slug, Content = w.Content, UpdatedAt = w.UpdatedAt
+            }).ToList();
+            return Partial("_WikiPartial", wikiPages);
         }
-
-        private async Task<bool> IsProjectOwner(Guid projectId)
-        {
-            var userId = Guid.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            return await _db.Projects
-                .AnyAsync(p => p.Id == projectId && p.ManagerId == userId);
-        }
-
 
         public async Task<IActionResult> OnGetWikiDetailAsync(Guid id)
         {
-            var wiki = await _db.WikiPages.FindAsync(id);
+            var wiki = await _wikiService.GetByIdAsync(id);
             if (wiki == null) return NotFound();
-
-            return new JsonResult(new
-            {
-                id = wiki.Id,
-                title = wiki.Title,
-                content = wiki.Content
-            });
+            return new JsonResult(new { id = wiki.Id, title = wiki.Title, content = wiki.Content });
         }
-     
 
-public async Task<IActionResult> OnPostCreateWikiAsync(
-    [FromBody] WikiCreateDto dto)
-    {
-        if (!ModelState.IsValid)
-            return BadRequest(ModelState);
-
-        if (!await IsProjectOwner(dto.ProjectId))
-            return Forbid();
-
-        var userId = Guid.Parse(
-            User.FindFirstValue(ClaimTypes.NameIdentifier)!
-        );
-
-        var wiki = new WikiPage
+        public async Task<IActionResult> OnPostCreateWikiAsync([FromBody] WikiCreateDto dto)
         {
-            Id = Guid.NewGuid(),
-            ProjectId = dto.ProjectId,
-            Title = dto.Title,
-            Content = dto.Content,
-            UpdatedAt = DateTime.UtcNow,
-            LastUpdatedBy = userId
-        };
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userId = GetUserId();
+            if (!await _projectService.IsOwnerAsync(dto.ProjectId, userId)) return Forbid();
+            await _wikiService.CreateAsync(dto.ProjectId, dto.Title, dto.Content, userId);
+            return new JsonResult(new { success = true });
+        }
 
-        _db.WikiPages.Add(wiki);
-        await _db.SaveChangesAsync();
-
-        return new JsonResult(new { success = true });
-    }
-
-        public async Task<IActionResult> OnPostEditWikiAsync(
-         [FromBody] WikiEditDto dto)
+        public async Task<IActionResult> OnPostEditWikiAsync([FromBody] WikiEditDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var wiki = await _db.WikiPages.FindAsync(dto.Id);
-            if (wiki == null)
-                return NotFound();
-
-            if (!await IsProjectOwner(wiki.ProjectId))
-                return Forbid();
-
-            wiki.Title = dto.Title;
-            wiki.Content = dto.Content;
-            wiki.UpdatedAt = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            var userId = GetUserId();
+            var wiki = await _wikiService.GetByIdAsync(dto.Id);
+            if (wiki == null) return NotFound();
+            if (!await _projectService.IsOwnerAsync(wiki.ProjectId, userId)) return Forbid();
+            await _wikiService.UpdateAsync(dto.Id, dto.Title, dto.Content, userId);
             return new JsonResult(new { success = true });
         }
 
         public async Task<IActionResult> OnPostDeleteWikiAsync(Guid id)
         {
-            var wiki = await _db.WikiPages.FindAsync(id);
+            var userId = GetUserId();
+            var wiki = await _wikiService.GetByIdAsync(id);
             if (wiki == null) return NotFound();
-
-            if (!await IsProjectOwner(wiki.ProjectId))
-                return Forbid();
-
-            _db.WikiPages.Remove(wiki);
-            await _db.SaveChangesAsync();
-
+            if (!await _projectService.IsOwnerAsync(wiki.ProjectId, userId)) return Forbid();
+            await _wikiService.DeleteAsync(id, userId);
             return new JsonResult(true);
         }
 
-        public async Task<IActionResult> OnPostDeleteProjectAsync(
-    [FromBody] DeleteProjectRequest req)
+        // ── POST: Delete project ───────────────────────
+
+        public async Task<IActionResult> OnPostDeleteProjectAsync([FromBody] DeleteProjectRequest req)
         {
-            var userId = Guid.Parse(
-                User.FindFirstValue(ClaimTypes.NameIdentifier)!
-            );
-
-            var project = await _db.Projects
-                .FirstOrDefaultAsync(p => p.Id == req.ProjectId);
-
-            if (project == null)
-                return new JsonResult(new { success = false });
-
-            if (project.ManagerId != userId)
+            var userId = GetUserId();
+            var result = await _projectService.DeleteAsync(req.ProjectId, userId);
+            if (!result)
                 return new JsonResult(new { success = false, message = "Forbidden" });
-
-            _db.Projects.Remove(project);
-            await _db.SaveChangesAsync();
-
-            return new JsonResult(new
-            {
-                success = true,
-                redirectUrl = Url.Page("/Index")
-            });
+            return new JsonResult(new { success = true, redirectUrl = Url.Page("/Index") });
         }
 
+        // ── Comment endpoints ──────────────────────────
 
-        // Comment 
         public async Task<IActionResult> OnGetTaskCommentsAsync(Guid taskId)
         {
-            // 1️⃣ Load comments
-            var comments = await _db.Comments
-    .Where(c => c.TaskId == taskId && !c.IsDeleted)
-    .OrderBy(c => c.CreatedAt)
-    .Select(c => new CommentItemVM
-    {
-        Id = c.Id,
-        TaskId = c.TaskId,
-        ParentId = c.ParentId,
-        UserId = c.UserId,
-        Content = c.Content,
-        CreatedAt = c.CreatedAt,
-
-        Attachments = c.Attachments.Select(a => new CommentAttachmentVM
-        {
-            FileName = a.FileName,
-            FilePath = a.FilePath,
-            ContentType = a.ContentType,
-            FileSize = a.FileSize
-        }).ToList(),
-
-        Replies = new List<CommentItemVM>()
-    })
-    .ToListAsync();
-
-
-            // 2️⃣ Lấy danh sách userId (long)
-            var userIds = comments
-                .Select(c => c.UserId)
-                .Distinct()
-                .ToList();
-
-            // ⚠️ BẠN PHẢI CÓ CỘT map
-            // VD: Users.CommentUserId (long) hoặc tương tự
-            var users = await _db.Users
-                .Where(u => userIds.Contains(u.Id))
-                .ToDictionaryAsync(u => u.Id);
-
-
-            // 3️⃣ Map user info
-            foreach (var c in comments)
-            {
-                if (users.TryGetValue(c.UserId, out var u))
-                {
-                    c.UserName = u.FullName;
-                    c.AvatarUrl = u.AvatarUrl;
-                }
-            }
-
-            // 4️⃣ Build tree
-            var lookup = comments.ToDictionary(c => c.Id);
-            var roots = new List<CommentItemVM>();
-
-            foreach (var c in comments)
-            {
-                if (c.ParentId == null)
-                    roots.Add(c);
-                else if (lookup.TryGetValue(c.ParentId.Value, out var parent))
-                    parent.Replies.Add(c);
-            }
-
+            var userId = User.Identity?.IsAuthenticated == true ? GetUserId() : (Guid?)null;
+            var roots = await _commentService.GetCommentTreeAsync(taskId, userId);
             return new JsonResult(roots);
         }
 
-        public async Task<IActionResult> OnPostCreateCommentAsync(
-    [FromForm] CreateCommentDto dto)
+        public async Task<IActionResult> OnPostCreateCommentAsync([FromForm] CreateCommentDto dto)
         {
-            // Kiểm tra authentication
-            if (!User.Identity?.IsAuthenticated ?? true)
-            {
-                return Unauthorized();
-            }
+            if (!User.Identity?.IsAuthenticated ?? true) return Unauthorized();
+            var userId = GetUserId();
 
-            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                        await _commentService.CreateAsync(new CreateCommentRequest
             {
-                return Unauthorized();
-            }
-
-            // Tạo comment với ID kiểu long
-            var comment = new CommentEntity
-            {
-                // KHÔNG set Id - để database tự tạo (identity)
-                // Id sẽ được database tự tạo vì nó là bigint identity
                 TaskId = dto.TaskId,
-                UserId = userId,
                 Content = dto.Content,
                 ParentId = dto.ParentId,
-                CreatedAt = DateTime.UtcNow,
-                IsDeleted = false
-            };
+                Attachments = dto.Attachments?.ToList()
+            }, userId);
 
-            _db.Comments.Add(comment);
-            await _db.SaveChangesAsync(); // Sau save, comment.Id sẽ có giá trị
-                                          // ===============================
-                                          // 📎 SAVE ATTACHMENTS
-                                          // ===============================
-            if (dto.Attachments != null && dto.Attachments.Any())
+            // Fetch the task to get ProjectId for broadcasting
+            var taskDetail = await _taskService.GetTaskDetailAsync(dto.TaskId, userId);
+            if (taskDetail != null)
             {
-                var uploadRoot = Path.Combine("wwwroot", "uploads", "comments", comment.Id.ToString());
-                Directory.CreateDirectory(uploadRoot);
-
-                foreach (var file in dto.Attachments)
-                {
-                    if (file.Length == 0) continue;
-
-                    var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-                    var filePath = Path.Combine(uploadRoot, fileName);
-
-                    using var stream = new FileStream(filePath, FileMode.Create);
-                    await file.CopyToAsync(stream);
-
-                    // 👉 Nếu bạn có bảng CommentAttachment
-                    _db.CommentAttachments.Add(new CommentAttachment
-                    {
-                        Id = Guid.NewGuid(),
-                        CommentId = comment.Id,
-                        FileName = file.FileName,
-                        FilePath = $"/uploads/comments/{comment.Id}/{fileName}",
-                        ContentType = file.ContentType,
-                        FileSize = file.Length,
-                        CreatedAt = DateTime.UtcNow
-                    });
-                }
-
-                await _db.SaveChangesAsync();
-            }
-            // ===============================
-            // 🔔 CREATE MENTION NOTIFICATIONS
-            // ===============================
-
-            var mentionedUserIds = ExtractMentionedUserIds(dto.Content);
-
-            // Lấy thông tin task và commenter
-            var task = await _db.Tasks
-                .FirstOrDefaultAsync(t => t.Id == dto.TaskId);
-
-            var commenter = await _db.Users.FindAsync(userId);
-            var commenterName = commenter?.FullName ?? "Someone";
-            var taskTitle = task?.Title ?? "a task";
-
-            // Tạo notifications
-            var notifications = new List<NotificationEntity>();
-
-            foreach (var mentionedUserId in mentionedUserIds)
-            {
-                // ❌ không tự notify chính mình
-                if (mentionedUserId == userId)
-                    continue;
-
-                var projectId = task?.ProjectId;
-
-                var notification = new NotificationEntity
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = mentionedUserId,
-                    Type = "CommentMention",
-                    Message = $"{commenterName} mentioned you in a comment on task: {taskTitle}",
-                    TaskId = dto.TaskId,
-                    CommentId = comment.Id,
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow,
-                    LinkUrl = $"/Projects/Details?id={projectId}&taskId={dto.TaskId}&commentId={comment.Id}"
-                };
-
-
-
-                notifications.Add(notification);
-            }
-
-            if (notifications.Any())
-            {
-                _db.Notifications.AddRange(notifications);
-                await _db.SaveChangesAsync();
+                await _hub.Clients.Group(taskDetail.ProjectId.ToString())
+                    .SendAsync("CommentAdded", new { taskId = dto.TaskId });
             }
 
             return new JsonResult(new { success = true });
         }
-        private List<Guid> ExtractMentionedUserIds(string content)
+
+        public async Task<IActionResult> OnPostVoteCommentAsync([FromBody] VoteCommentRequest req)
         {
-            var result = new List<Guid>();
+            if (!User.Identity?.IsAuthenticated ?? true) return Unauthorized();
+            var userId = GetUserId();
 
-            // @{guid}|Full Name
-            var matches = Regex.Matches(
-                content,
-                @"@\{([0-9a-fA-F-]{36})\}\|"
-            );
-
-            foreach (Match m in matches)
+                        var result = await _commentService.VoteAsync(req.CommentId, userId, req.IsUpvote);
+            var taskDetail = await _taskService.GetTaskDetailAsync(req.TaskId, userId);
+            if (taskDetail != null)
             {
-                if (Guid.TryParse(m.Groups[1].Value, out var id))
-                {
-                    result.Add(id);
-                }
+                await _hub.Clients.Group(taskDetail.ProjectId.ToString())
+                    .SendAsync("CommentVoted", new { taskId = req.TaskId });
             }
-
-            return result.Distinct().ToList();
+            return new JsonResult(new { success = true, upvotes = result.Upvotes, downvotes = result.Downvotes });
         }
-        private List<string> ExtractMentions(string content)
+
+        public class VoteCommentRequest
         {
-            return Regex.Matches(content, @"@(\w+)")
-                .Select(m => m.Groups[1].Value)
-                .Distinct()
-                .ToList();
+            public long CommentId { get; set; }
+            public bool IsUpvote { get; set; }
+            public Guid TaskId { get; set; }
         }
-        public async Task<IActionResult> OnGetSummaryStatsAsync(Guid id)
+
+        // ── Private helpers ────────────────────────────
+
+        private Guid GetUserId() =>
+            Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+        private async Task BroadcastProjectSummary(Guid projectId)
         {
-            var tasks = _db.Tasks.Where(t => t.ProjectId == id);
-
-            var todo = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Todo);
-            var inProgress = await tasks.CountAsync(t => t.Status == TaskStatusEnum.InProgress);
-            var review = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Review);
-            var completed = await tasks.CountAsync(t => t.Status == TaskStatusEnum.Completed);
-
-            return new JsonResult(new
-            {
-                summary = new
+            var progress = await _projectService.CalculateProgressAsync(projectId);
+            await _hub.Clients.Group(projectId.ToString())
+                .SendAsync("ProjectStatsUpdated", new
                 {
-                    totalTasks = todo + inProgress + review + completed,
-                    openTasks = todo + inProgress + review,
-                    completedTasks = completed
-                },
-                chart = new { todo, inProgress, review, completed }
-            });
+                    summary = new
+                    {
+                        totalTasks = progress.TotalTasks,
+                        openTasks = progress.OpenTasks,
+                        completedTasks = progress.CompletedTasks,
+                        progressPercent = progress.ProgressPercent
+                    },
+                    chart = new
+                    {
+                        todo = progress.Todo,
+                        inProgress = progress.InProgress,
+                        review = progress.Review,
+                        completed = progress.CompletedTasks,
+                        onHold = progress.OnHold
+                    }
+                });
         }
-        public async Task<IActionResult> OnGetProjectMembersAsync(Guid projectId)
-        {
-            var members = await (
-                from pm in _db.ProjectMembers
-                join u in _db.Users on pm.UserId equals u.Id
-                where pm.ProjectId == projectId
-                select new
-                {
-                    u.Id,
-                    u.FullName,
-                    u.AvatarUrl
-                }
-            ).ToListAsync();
 
-            return new JsonResult(members);
-        }
+        private static TaskBoardItemVM MapToBoard(TaskItemDto t) => new()
+        {
+            Id = t.Id, Title = t.Title, Status = t.Status,
+            Priority = t.Priority, Deadline = t.Deadline,
+            AssigneeId = t.AssigneeId, AssigneeName = t.AssigneeName, Tags = t.Tags
+        };
+    }
+
+    // ── ViewModels (kept for Razor views compatibility) ─
+
+    public class ProjectDetailsVM
+    {
+        public Guid ProjectId { get; set; }
+        public string Name { get; set; } = "";
+        public string? Description { get; set; }
+        public bool IsArchived { get; set; }
+        public string CurrentUserRole { get; set; } = "";
+        public ProjectOwnerVM Owner { get; set; } = new();
+        public int TotalTasks { get; set; }
+        public int OpenTasks { get; set; }
+        public int CompletedTasks { get; set; }
+        public double ProgressPercent { get; set; }
+        public bool CanEditWiki { get; set; }
+        public bool CanEditSettings { get; set; }
+        public List<ProjectMemberVM> Members { get; set; } = new();
+        public List<WikiPage> Wikis { get; set; } = new();
+    }
+
+    public class ProjectBoardVM
+    {
+        public List<TaskBoardItemVM> Todo { get; set; } = new();
+        public List<TaskBoardItemVM> InProgress { get; set; } = new();
+        public List<TaskBoardItemVM> Review { get; set; } = new();
+        public List<TaskBoardItemVM> Done { get; set; } = new();
+    }
+
+    public class TaskBoardItemVM
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; } = "";
+        public TaskStatusEnum Status { get; set; }
+        public int Priority { get; set; }
+        public DateTime? Deadline { get; set; }
+        public Guid? AssigneeId { get; set; }
+        public string? AssigneeName { get; set; }
+        public List<PROJECTHUB_ENTERPRISE.Services.Interfaces.TagDto> Tags { get; set; } = new();
+    }
+
+    public class ProjectOwnerVM
+    {
+        public Guid UserId { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+    }
+
+    public class ProjectMemberVM
+    {
+        public Guid UserId { get; set; }
+        public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string Role { get; set; } = "";
     }
 }
+
+
+
+
+
+
+
+
